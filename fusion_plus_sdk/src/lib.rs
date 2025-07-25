@@ -1,0 +1,44 @@
+pub mod error;
+pub use error::{Error, Result};
+pub mod chain_id;
+pub mod quote;
+pub mod utils;
+
+use serde::{Serialize, de::DeserializeOwned};
+
+use crate::utils::SerdeResponseParse;
+
+pub struct FusionPlusSdk {
+    pub base_url: String,
+    pub api_key: String,
+}
+
+impl FusionPlusSdk {
+    pub fn new(base_url: impl Into<String>, api_key: impl Into<String>) -> Self {
+        FusionPlusSdk {
+            base_url: base_url.into(),
+            api_key: api_key.into(),
+        }
+    }
+
+    async fn perform_get<Q, R>(&self, route: &str, params: Q) -> crate::Result<R>
+    where
+        Q: Serialize,
+        R: DeserializeOwned,
+    {
+        let client = reqwest::Client::new();
+        let result = client
+            .get(format!("{}/{route}", self.base_url))
+            .bearer_auth(&self.api_key)
+            .query(&params)
+            .send()
+            .await?;
+        if result.status().is_success() {
+            let response: R = result.serde_parse_custom().await?;
+            Ok(response)
+        } else {
+            let error_text = result.text().await?;
+            Err(Error::InternalError(error_text))
+        }
+    }
+}
