@@ -2,15 +2,15 @@ use alloy::primitives::{Address, B256, Bytes, U256};
 
 use crate::{
     chain_id::ChainId,
-    constants::{NATIVE_CURRENCY, UINT_128_MAX},
     fusion::{
-        auction_details::AuctionDetails,
-        fusion_extension::{self, FusionExtension},
+        auction_details::AuctionDetails, fusion_extension::FusionExtension,
         settlement_post_interaction::SettlementPostInteractionData,
+        source_track::inject_track_code,
     },
-    hash_lock::HashLock,
-    limit::{limit_order::LimitOrder, maker_traits::MakerTraits, order_info::OrderInfoData},
-    quote::TimeLocks,
+    limit::{
+        interaction::Interaction, limit_order::LimitOrder, maker_traits::MakerTraits,
+        order_info::OrderInfoData,
+    },
     utils::bps::Bps,
 };
 
@@ -28,8 +28,8 @@ pub struct ResolverFee {
 
 #[derive(Clone, Debug)]
 pub struct IntegratorFee {
-    receiver: Address,
-    ratio: u64,
+    pub receiver: Address,
+    pub ratio: u16,
 }
 
 #[derive(Clone, Debug)]
@@ -38,24 +38,20 @@ pub struct Fees {
     integrator: IntegratorFee,
 }
 
-pub struct Interaction {
-    pub target: Address,
-    pub data: Bytes,
+#[derive(Clone, Debug)]
+pub struct FusionOrderExtra {
+    pub unwrap_weth: Option<bool>,
+    pub nonce: Option<u64>,
+    pub permit: Option<Bytes>,
+    pub allow_partial_fills: Option<bool>,
+    pub allow_multiple_fills: Option<bool>,
+    pub order_expiration_delay: Option<u64>,
+    pub enable_permit2: Option<bool>,
+    pub source: Option<String>,
+    pub fees: Option<Fees>,
 }
 
 #[derive(Clone, Debug)]
-pub struct FusionOrderExtra {
-    unwrap_weth: Option<bool>,
-    nonce: Option<u64>,
-    permit: Option<Bytes>,
-    allow_partial_fills: Option<bool>,
-    allow_multiple_fills: Option<bool>,
-    order_expiration_delay: Option<u64>,
-    enable_permit2: Option<bool>,
-    source: Option<String>,
-    fees: Option<Fees>,
-}
-
 pub struct FusionOrder {
     settlement_extension_contract: Address,
     // order_info: OrderInfoData,
@@ -88,14 +84,17 @@ impl FusionOrder {
         };
 
         let extra = extra.unwrap_or(extra_default.clone());
-        let fusion_extension = fusion_extension.unwrap_or_else(|| FusionExtension {
-            settlement_extension_contract,
-            auction_details: auction_details.clone(),
-            post_interaction_data: post_interaction_data.clone(),
-            maker_permit: extra.permit.map(|permit| Interaction {
-                target: order_info.maker_asset,
-                data: permit,
-            }),
+
+        let fusion_extension = fusion_extension.unwrap_or_else(|| {
+            FusionExtension::new(
+                settlement_extension_contract,
+                auction_details.clone(),
+                post_interaction_data.clone(),
+                extra.permit.map(|permit| Interaction {
+                    target: order_info.maker_asset,
+                    data: permit,
+                }),
+            )
         });
 
         let unwrap_weth = extra.unwrap_weth.or(extra_default.unwrap_weth).unwrap();
@@ -155,12 +154,30 @@ impl FusionOrder {
             order_info.receiver.unwrap_or(order_info.maker)
         };
 
-        // TODO Build extension
+        let built_extension = fusion_extension.build();
+        let salt = LimitOrder::build_salt(&built_extension, order_info.salt);
+        let salt_with_injected_track_code = if let Some(salt) = order_info.salt {
+            salt
+        } else {
+            inject_track_code(salt, extra.source)
+        };
+
+        let inner = LimitOrder::new(
+            order_info
+                .with_receiver(receiver)
+                .with_salt(salt_with_injected_track_code),
+            Some(maker_traits),
+            Some(built_extension),
+        );
 
         Self {
             settlement_extension_contract,
             fusion_extension,
-            inner: todo!(),
+            inner,
         }
+    }
+
+    pub fn get_order_hash(&self, chain_id: ChainId) -> B256 {
+        return self.inner.get_order_hash(chain_id);
     }
 }

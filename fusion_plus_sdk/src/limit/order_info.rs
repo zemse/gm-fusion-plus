@@ -1,4 +1,4 @@
-use alloy::primitives::{Address, B256, U256};
+use alloy::primitives::{Address, U256};
 
 pub struct OrderInfoData {
     pub maker_asset: Address,
@@ -7,16 +7,17 @@ pub struct OrderInfoData {
     pub taking_amount: U256,
     pub maker: Address,
     pub receiver: Option<Address>,
-    pub salt: Option<B256>,
+    pub salt: Option<U256>,
 }
 
-pub struct LimitOrderV4Struct {
-    salt: B256,
-    maker: Address,
-    receiver: Address,
-    maker_asset: Address,
-    taker_asset: Address,
-    making_amount: U256,
-    taking_amount: U256,
-    maker_traits: B256,
+impl OrderInfoData {
+    pub fn with_receiver(mut self, receiver: Address) -> Self {
+        self.receiver = Some(receiver);
+        self
+    }
+
+    pub fn with_salt(mut self, salt: U256) -> Self {
+        self.salt = Some(salt);
+        self
+    }
 }

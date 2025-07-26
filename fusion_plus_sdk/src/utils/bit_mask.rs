@@ -28,4 +28,13 @@ impl BitMask {
     pub fn to_hex_string(&self) -> String {
         format!("{:#x}", self.to_u256())
     }
+
+    // https://github.com/1inch/ts-byte-utils-lib/blob/53ddb51d47112db52c1f2954743a31cd771e0f37/src/bn/bn.ts#L92
+    pub fn get_from(&self, value: U256) -> U256 {
+        value >> self.offset & self.mask
+    }
+
+    pub fn set_at(&self, principal_value: U256, new_bits: U256) -> U256 {
+        (principal_value & !(self.mask << self.offset)) | ((new_bits & self.mask) << self.offset)
+    }
 }

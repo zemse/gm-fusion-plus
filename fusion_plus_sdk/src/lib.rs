@@ -1,5 +1,6 @@
 pub mod error;
 pub use error::{Error, Result};
+pub mod addresses;
 pub mod chain_id;
 pub mod constants;
 pub mod fusion;
@@ -12,7 +13,7 @@ pub mod whitelist;
 
 use serde::{Serialize, de::DeserializeOwned};
 
-use crate::utils::SerdeResponseParse;
+use crate::utils::serde_response_custom_parser::SerdeResponseParse;
 
 pub struct FusionPlusSdk {
     pub base_url: String,

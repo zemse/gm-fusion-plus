@@ -1,11 +1,11 @@
 pub mod preset;
 
-use alloy::primitives::Address;
+use alloy::primitives::{Address, Bytes, U256};
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 
 use crate::{
     FusionPlusSdk,
+    chain_id::ChainId,
     quote::preset::{Preset, PresetType},
 };
 
@@ -13,39 +13,39 @@ use crate::{
 #[serde(rename_all = "camelCase")]
 pub struct QuoteRequest {
     #[serde(rename = "srcChain")]
-    pub src_chain_id: u32,
+    pub src_chain_id: ChainId,
     #[serde(rename = "dstChain")]
-    pub dst_chain_id: u32,
+    pub dst_chain_id: ChainId,
     pub src_token_address: Address,
     pub dst_token_address: Address,
     #[serde(rename = "amount")]
     pub src_amount: String,
     pub enable_estimate: bool,
     #[serde(rename = "walletAddress")]
-    pub dst_address: Address,
+    pub maker_address: Address,
+    pub permit: Option<Bytes>,
+    pub fee: Option<u64>,
+    pub source: Option<String>,
+    pub is_permit2: Option<bool>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct QuoteResult {
-    pub quote_id: Value, // QuoteId,
-    pub src_token_amount: String,
-    pub dst_token_amount: String,
+    pub quote_id: Option<String>,
+    pub src_token_amount: U256,
+    pub dst_token_amount: U256,
     pub presets: QuotePresets,
     pub src_escrow_factory: Address,
     pub dst_escrow_factory: Address,
-    pub whitelist: Vec<String>,
+    pub whitelist: Vec<Address>,
     pub time_locks: TimeLocks,
-    pub src_safety_deposit: String,
-    pub dst_safety_deposit: String,
+    pub src_safety_deposit: U256,
+    pub dst_safety_deposit: U256,
     pub recommended_preset: PresetType,
     pub prices: PairCurrency,
     pub volume: PairCurrency,
 }
-
-// #[derive(Debug, Serialize, Deserialize)]
-// #[serde(rename_all = "camelCase")]
-// pub struct QuoteId {}
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -57,18 +57,14 @@ pub struct QuotePresets {
     pub custom: Option<Preset>,
 }
 
-// #[derive(Debug, Serialize, Deserialize)]
-// #[serde(rename_all = "camelCase")]
-// pub struct ExclusiveResolver {}
-
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GasCostConfig {
     pub gas_bump_estimate: u64,
-    pub gas_price_estimate: u64,
+    pub gas_price_estimate: U256,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TimeLocks {
     pub src_withdrawal: usize,
@@ -89,12 +85,12 @@ pub struct PairCurrency {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TokenPair {
-    pub src_token: Address,
-    pub dst_token: Address,
+    pub src_token: String,
+    pub dst_token: String,
 }
 
 impl FusionPlusSdk {
-    pub async fn get_quote(&self, params: QuoteRequest) -> crate::Result<QuoteResult> {
+    pub async fn get_quote(&self, params: &QuoteRequest) -> crate::Result<QuoteResult> {
         let result = self
             .perform_get("quoter/v1.0/quote/receive", params)
             .await?;
@@ -105,13 +101,13 @@ impl FusionPlusSdk {
 
 impl QuoteRequest {
     pub fn new(
-        src_chain_id: impl Into<u32>,
-        dst_chain_id: impl Into<u32>,
+        src_chain_id: impl Into<ChainId>,
+        dst_chain_id: impl Into<ChainId>,
         src_token_address: impl Into<Address>,
         dst_token_address: impl Into<Address>,
         src_amount: impl ToString,
         enable_estimate: bool,
-        dst_address: impl Into<Address>,
+        maker_address: impl Into<Address>,
     ) -> Self {
         QuoteRequest {
             src_chain_id: src_chain_id.into(),
@@ -120,7 +116,11 @@ impl QuoteRequest {
             dst_token_address: dst_token_address.into(),
             src_amount: src_amount.to_string(),
             enable_estimate,
-            dst_address: dst_address.into(),
+            maker_address: maker_address.into(),
+            permit: None,
+            fee: None,
+            source: Some("gm/rust-sdk".to_string()),
+            is_permit2: None,
         }
     }
 }

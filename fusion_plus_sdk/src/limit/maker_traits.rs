@@ -32,7 +32,7 @@ const HAS_EXTENSION_FLAG: usize = 249;
 const USE_PERMIT2_FLAG: usize = 248;
 const UNWRAP_WETH_FLAG: usize = 247;
 
-#[derive(Default)]
+#[derive(Clone, Debug, Default)]
 pub struct MakerTraits {
     value: U256,
 }
@@ -42,6 +42,11 @@ impl MakerTraits {
         Self { value }
     }
 
+    pub fn as_u256(&self) -> U256 {
+        self.value
+    }
+
+    // TODO move these
     // https://github.com/1inch/ts-byte-utils-lib/blob/53ddb51d47112db52c1f2954743a31cd771e0f37/src/bn/bn.ts#L92
     pub fn get_mask(&self, mask: BitMask) -> U256 {
         self.value >> mask.offset & mask.mask
@@ -224,10 +229,6 @@ impl MakerTraits {
     pub fn disable_native_unwrap(mut self) -> Self {
         self.value.set_bit(UNWRAP_WETH_FLAG, false);
         self
-    }
-
-    pub fn as_u256(&self) -> U256 {
-        self.value
     }
 
     pub fn is_bit_invalidator_mode(&self) -> bool {

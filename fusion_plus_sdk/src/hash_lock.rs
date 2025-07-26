@@ -5,7 +5,7 @@ use alloy::{
 use alloy_merkle_tree::standard_binary_tree::StandardMerkleTree;
 use serde::Serialize;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct HashLock {
     pub hash: B256,
 }
@@ -24,16 +24,16 @@ impl HashLock {
         HashLock { hash }
     }
 
-    pub fn hash_secret(secret: B256) -> B256 {
+    pub fn hash_secret(secret: &B256) -> B256 {
         keccak256(secret)
     }
 
-    pub fn for_single_fill(secret: B256) -> Self {
+    pub fn for_single_fill(secret: &B256) -> Self {
         let hash = Self::hash_secret(secret);
         HashLock::new(hash)
     }
 
-    pub fn for_multi_fill(secret: Vec<B256>) -> crate::Result<Self> {
+    pub fn for_multiple_fills(secret: Vec<B256>) -> crate::Result<Self> {
         if secret.len() <= 2 {
             return Err(crate::Error::InternalErrorStr(
                 "leaves array must be greater than 2. Or use HashLock.forSingleFill",

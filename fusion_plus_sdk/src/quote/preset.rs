@@ -1,4 +1,4 @@
-use alloy::primitives::Address;
+use alloy::primitives::{Address, U256};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
@@ -27,7 +27,7 @@ pub struct Preset {
     pub start_amount: String,
     pub auction_end_amount: String,
     pub exclusive_resolver: Option<Address>,
-    pub cost_in_dst_token: Address,
+    pub cost_in_dst_token: U256,
     pub points: Vec<AuctionPoint>,
     pub allow_partial_fills: bool,
     pub allow_multiple_fills: bool,

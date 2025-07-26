@@ -13,6 +13,19 @@ pub const UINT_128_MAX: U256 = U256::from_limbs([
     0,
 ]);
 
+pub const UINT_160_MAX: U256 = U256::from_limbs([
+    u64::MAX,        // lower 64 bits
+    u64::MAX,        // next 64 bits
+    u32::MAX as u64, // next 32 bits
+    0,
+]);
+
+pub const UINT_256_MAX: U256 = U256::from_limbs([
+    u64::MAX, // lower 64 bits
+    u64::MAX, // next 64 bits
+    u64::MAX, // next 64 bits
+    u64::MAX, // upper 64 bits of the 256-bit value
+]);
 pub const NATIVE_CURRENCY: Address = Address::new([
     0xEE, 0xEE, 0xEE, 0xEE, 0xEE, 0xEE, 0xEE, 0xEE, 0xEE, 0xEE, 0xEE, 0xEE, 0xEE, 0xEE, 0xEE, 0xEE,
     0xEE, 0xEE, 0xEE, 0xEE,

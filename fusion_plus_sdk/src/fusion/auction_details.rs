@@ -1,4 +1,7 @@
-use alloy::primitives::Address;
+use alloy::{
+    dyn_abi::DynSolValue,
+    primitives::{Address, Bytes, U256},
+};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -21,6 +24,31 @@ pub struct AuctionDetails {
     pub gas_cost: GasCostConfig,
 }
 
+impl AuctionDetails {
+    pub fn encode(&self) -> Bytes {
+        let mut result = DynSolValue::Tuple(vec![
+            DynSolValue::Uint(U256::from(self.gas_cost.gas_bump_estimate), 24),
+            DynSolValue::Uint(U256::from(self.gas_cost.gas_price_estimate), 32),
+            DynSolValue::Uint(U256::from(self.start_time), 32),
+            DynSolValue::Uint(U256::from(self.duration), 24),
+            DynSolValue::Uint(U256::from(self.initial_rate_bump), 24),
+        ])
+        .abi_encode_packed();
+
+        for point in &self.points {
+            let point_encoded = DynSolValue::Tuple(vec![
+                DynSolValue::Uint(U256::from(point.coefficient), 24),
+                DynSolValue::Uint(U256::from(point.delay), 16),
+            ])
+            .abi_encode_packed();
+
+            result.extend(point_encoded);
+        }
+
+        result.into()
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AuctionPoint {
@@ -40,7 +68,7 @@ impl AuctionDetails {
         assert!(duration <= UINT_24_MAX);
         assert!(initial_rate_bump <= UINT_24_MAX);
         assert!(gas_cost.gas_bump_estimate <= UINT_24_MAX);
-        assert!(gas_cost.gas_price_estimate <= UINT_32_MAX);
+        assert!(gas_cost.gas_price_estimate <= U256::from(UINT_32_MAX));
 
         Self {
             start_time,

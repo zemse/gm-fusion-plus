@@ -1,6 +1,4 @@
-use std::ops::Add;
-
-use alloy::primitives::{Address, B256, Bytes, FixedBytes, U256};
+use alloy::primitives::{Address, B256, Bytes, U256};
 use chrono::Utc;
 use rand::Rng;
 use serde::Serialize;
@@ -11,25 +9,32 @@ use crate::{
     constants::{NATIVE_CURRENCY, UINT_40_MAX, UINT_128_MAX},
     fusion::{
         auction_details::{AuctionDetails, AuctionWhitelistItem},
-        fusion_order::{FusionOrder, IntegratorFee, Interaction},
+        fusion_extension::FusionExtension,
+        fusion_order::{FusionOrder, FusionOrderExtra, IntegratorFee},
         settlement_post_interaction::{SettlementPostInteractionData, SettlementSuffixData},
     },
     hash_lock::HashLock,
-    limit::order_info::OrderInfoData,
+    limit::{interaction::Interaction, order_info::OrderInfoData},
     quote::{QuoteRequest, QuoteResult, TimeLocks, preset::PresetType},
     utils::bps::Bps,
-    whitelist::Whitelist,
 };
 
 #[derive(Debug, Serialize)]
 pub struct OrderParams {
     #[serde(rename = "walletAddress")]
-    dst_address: Address,
+    pub dst_address: Address,
 
     #[serde(rename = "hashLock")]
-    hash_lock: HashLock,
+    pub hash_lock: HashLock,
 
-    secret_hashes: Vec<B256>,
+    pub secret_hashes: Vec<B256>,
+}
+
+#[derive(Clone, Debug)]
+pub struct PreparedOrder {
+    pub order: CrossChainOrder,
+    pub hash: B256,
+    pub quote_id: String,
 }
 
 pub struct Fee {
@@ -38,18 +43,41 @@ pub struct Fee {
 }
 
 impl FusionPlusSdk {
-    pub async fn create_order(
+    pub fn create_order(
         &self,
-        quote: QuoteResult,
+        quote_request: &QuoteRequest,
+        quote_result: &QuoteResult,
         order_params: OrderParams,
-    ) -> crate::Result<()> {
-        if !quote.quote_id.is_null() {
+    ) -> crate::Result<PreparedOrder> {
+        let Some(quote_id) = &quote_result.quote_id else {
             return Err(crate::Error::InternalErrorStr(
                 "request quote with enableEstimate=true",
             ));
-        }
+        };
 
-        Ok(())
+        let order = create_order(
+            quote_request,
+            quote_result,
+            CrossChainOrderParamsData {
+                hash_lock: order_params.hash_lock,
+                preset: None, // PresetType::Fast,
+                receiver: Some(order_params.dst_address),
+                nonce: None, // Some(0),
+                permit: None,
+                is_permit_2: false,
+                taking_fee_receiver: None,
+                delay_auction_start_time_by: None,
+                order_expiration_delay: None,
+            },
+        );
+
+        let hash = order.get_order_hash(quote_request.src_chain_id);
+
+        Ok(PreparedOrder {
+            order,
+            hash,
+            quote_id: quote_id.clone(),
+        })
     }
     pub async fn place_order(&self, quote: QuoteResult, order_params: OrderParams) {}
 }
@@ -60,7 +88,7 @@ pub struct CrossChainOrderParamsData {
     preset: Option<PresetType>,
     receiver: Option<Address>,
     nonce: Option<u64>,
-    permit: Option<String>,
+    permit: Option<Bytes>,
     is_permit_2: bool,
     taking_fee_receiver: Option<Address>,
     delay_auction_start_time_by: Option<u64>,
@@ -68,10 +96,10 @@ pub struct CrossChainOrderParamsData {
 }
 
 pub fn create_order(
-    quote_request: QuoteRequest,
-    quote_result: QuoteResult,
+    quote_request: &QuoteRequest,
+    quote_result: &QuoteResult,
     params: CrossChainOrderParamsData,
-) {
+) -> CrossChainOrder {
     let preset = params
         .preset
         .and_then(|preset| quote_result.get_preset(preset))
@@ -93,11 +121,72 @@ pub fn create_order(
     };
 
     let taker_asset = quote_request.dst_token_address;
+
+    let whitelist = get_whitelist(
+        &quote_result,
+        auction_details.start_time,
+        preset.exclusive_resolver.as_ref(),
+    );
+
+    CrossChainOrder::new(
+        quote_result.src_escrow_factory,
+        OrderInfoData {
+            maker_asset: quote_request.src_token_address,
+            taker_asset,
+            making_amount: quote_result.src_token_amount,
+            taking_amount: quote_result.dst_token_amount,
+            maker: quote_request.maker_address,
+            receiver: params.receiver,
+            salt: None,
+        },
+        EscrowParams {
+            hash_lock: params.hash_lock,
+            src_chain_id: quote_request.src_chain_id,
+            dst_chain_id: quote_request.dst_chain_id,
+            src_safety_deposit: quote_result.src_safety_deposit,
+            dst_safety_deposit: quote_result.dst_safety_deposit,
+            timelocks: quote_result.time_locks.clone(),
+        },
+        Details {
+            auction: auction_details,
+            fees: Some(DetailsFees {
+                integrator_fee: IntegratorFee {
+                    receiver: params.taking_fee_receiver.unwrap_or_default(),
+                    ratio: Bps::to_ratio_format(quote_request.fee) as u16,
+                },
+                bank_fee: Some(0),
+            }),
+            whitelist,
+            resolving_start_time: None,
+        },
+        Some(CrossChainExtra {
+            nonce,
+            permit: params.permit,
+            order_expiration_delay: params.order_expiration_delay,
+            enable_permit2: Some(params.is_permit_2),
+            source: quote_request.source.clone(),
+            allow_multiple_fills: Some(allow_multiple_fills),
+            allow_partial_fills: Some(allow_partial_fills),
+        }),
+    )
 }
 
-pub struct CrossChainOrder {
-    escrow_extension: EscrowExtension,
-    inner: FusionOrder,
+fn get_whitelist(
+    quote_result: &QuoteResult,
+    auction_start_time: u64,
+    exclusive_resolver: Option<&Address>,
+) -> Vec<AuctionWhitelistItem> {
+    quote_result
+        .whitelist
+        .iter()
+        .map(|resolver| {
+            let is_exclusive = exclusive_resolver == Some(resolver);
+            AuctionWhitelistItem {
+                address: *resolver,
+                allow_from: if is_exclusive { 0 } else { auction_start_time },
+            }
+        })
+        .collect()
 }
 
 pub struct EscrowParams {
@@ -109,11 +198,9 @@ pub struct EscrowParams {
     timelocks: TimeLocks,
 }
 
+#[derive(Clone, Debug)]
 pub struct EscrowExtension {
-    escrow_factory: Address,
-    auction_details: AuctionDetails,
-    post_interaction_data: SettlementPostInteractionData,
-    maker_permit: Option<Interaction>,
+    fusion_extension: FusionExtension,
     hash_lock_info: HashLock,
     dst_chain_id: ChainId,
     dst_token: Address,
@@ -123,6 +210,7 @@ pub struct EscrowExtension {
 }
 
 impl EscrowExtension {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         escrow_factory: Address,
         auction_details: AuctionDetails,
@@ -138,17 +226,19 @@ impl EscrowExtension {
         assert!(src_safety_deposit <= UINT_128_MAX);
         assert!(dst_safety_deposit <= UINT_128_MAX);
 
-        // TODO call construstor of FusionExtension
+        let fusion_extension = FusionExtension::new(
+            escrow_factory,
+            auction_details,
+            post_interaction_data,
+            maker_permit,
+        );
 
         if dst_token == Address::ZERO {
             dst_token = NATIVE_CURRENCY;
         }
 
         Self {
-            escrow_factory,
-            auction_details,
-            post_interaction_data,
-            maker_permit,
+            fusion_extension,
             hash_lock_info,
             dst_chain_id,
             dst_token,
@@ -171,7 +261,7 @@ pub struct Details {
     resolving_start_time: Option<u64>,
 }
 
-pub struct Extra {
+pub struct CrossChainExtra {
     nonce: Option<u64>,
     permit: Option<Bytes>,
     // Order will expire in `orderExpirationDelay` after auction ends Default 12s
@@ -182,13 +272,19 @@ pub struct Extra {
     allow_partial_fills: Option<bool>,
 }
 
+#[derive(Clone, Debug)]
+pub struct CrossChainOrder {
+    escrow_extension: EscrowExtension,
+    inner: FusionOrder,
+}
+
 impl CrossChainOrder {
     pub fn new(
         src_escrow_factory: Address,
         order_info: OrderInfoData, // CrossChainOrderInfo,
         escrow_params: EscrowParams,
         details: Details,
-        extra: Extra,
+        extra: Option<CrossChainExtra>,
     ) -> Self {
         let post_interaction_data = SettlementPostInteractionData::new(SettlementSuffixData {
             whitelist: details.whitelist,
@@ -204,10 +300,13 @@ impl CrossChainOrder {
             src_escrow_factory,
             details.auction,
             post_interaction_data,
-            extra.permit.map(|permit| Interaction {
-                target: order_info.maker_asset,
-                data: permit,
-            }),
+            extra
+                .as_ref()
+                .and_then(|extra| extra.permit.as_ref())
+                .map(|permit| Interaction {
+                    target: order_info.maker_asset,
+                    data: permit.clone(),
+                }),
             escrow_params.hash_lock,
             escrow_params.dst_chain_id,
             order_info.taker_asset,
@@ -221,13 +320,45 @@ impl CrossChainOrder {
             "src and dst chain ids must be different"
         );
 
-        Self::new_internal(ext, order_info, Some(extra))
+        Self::new_internal(ext, order_info, extra)
     }
 
     fn new_internal(
         extension: EscrowExtension,
         order_info: OrderInfoData,
-        extra: Option<Extra>,
+        extra: Option<CrossChainExtra>,
     ) -> Self {
+        let fusion_extension = extension.fusion_extension.clone();
+        Self {
+            escrow_extension: extension.clone(),
+            inner: FusionOrder::new(
+                extension.fusion_extension.settlement_extension_contract,
+                order_info,
+                extension.fusion_extension.auction_details,
+                extension.fusion_extension.post_interaction_data,
+                extra.map(Into::into),
+                Some(fusion_extension),
+            ),
+        }
+    }
+
+    pub fn get_order_hash(&self, src_chain_id: ChainId) -> B256 {
+        self.inner.get_order_hash(src_chain_id)
+    }
+}
+
+impl From<CrossChainExtra> for FusionOrderExtra {
+    fn from(extra: CrossChainExtra) -> Self {
+        Self {
+            unwrap_weth: None,
+            nonce: extra.nonce,
+            permit: extra.permit,
+            allow_partial_fills: extra.allow_partial_fills,
+            allow_multiple_fills: extra.allow_multiple_fills,
+            order_expiration_delay: extra.order_expiration_delay,
+            enable_permit2: extra.enable_permit2,
+            source: extra.source,
+            fees: None,
+        }
     }
 }

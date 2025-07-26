@@ -1,5 +1,5 @@
 use alloy::primitives::{Address, U256, address};
-use fusion_plus_sdk::{FusionPlusSdk, chain_id::ChainId, quote::QuoteParams};
+use fusion_plus_sdk::{FusionPlusSdk, chain_id::ChainId, quote::QuoteRequest};
 
 #[tokio::main]
 async fn main() -> fusion_plus_sdk::Result<()> {
@@ -9,7 +9,7 @@ async fn main() -> fusion_plus_sdk::Result<()> {
     );
 
     let result = sdk
-        .get_quote(QuoteParams::new(
+        .get_quote(&QuoteRequest::new(
             ChainId::Ethereum,
             ChainId::Arbitrum,
             address!("0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"), // USDC mainnet
