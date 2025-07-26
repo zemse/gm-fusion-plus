@@ -1,3 +1,4 @@
+#[derive(Clone, Copy, PartialEq)]
 pub enum ChainId {
     Ethereum = 1,
     Arbitrum = 42161,

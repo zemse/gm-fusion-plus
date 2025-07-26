@@ -1,8 +1,14 @@
 pub mod error;
 pub use error::{Error, Result};
 pub mod chain_id;
+pub mod constants;
+pub mod fusion;
+pub mod hash_lock;
+pub mod limit;
+pub mod order;
 pub mod quote;
 pub mod utils;
+pub mod whitelist;
 
 use serde::{Serialize, de::DeserializeOwned};
 
