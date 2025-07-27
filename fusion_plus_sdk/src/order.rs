@@ -123,7 +123,7 @@ pub fn create_order(
     let taker_asset = quote_request.dst_token_address;
 
     let whitelist = get_whitelist(
-        &quote_result,
+        quote_result,
         auction_details.start_time,
         preset.exclusive_resolver.as_ref(),
     );
@@ -176,17 +176,28 @@ fn get_whitelist(
     auction_start_time: u64,
     exclusive_resolver: Option<&Address>,
 ) -> Vec<AuctionWhitelistItem> {
-    quote_result
-        .whitelist
-        .iter()
-        .map(|resolver| {
-            let is_exclusive = exclusive_resolver == Some(resolver);
-            AuctionWhitelistItem {
+    if let Some(exclusive_resolver) = exclusive_resolver {
+        quote_result
+            .whitelist
+            .iter()
+            .map(|resolver| {
+                let is_exclusive = exclusive_resolver == resolver;
+                AuctionWhitelistItem {
+                    address: *resolver,
+                    allow_from: if is_exclusive { 0 } else { auction_start_time },
+                }
+            })
+            .collect()
+    } else {
+        quote_result
+            .whitelist
+            .iter()
+            .map(|resolver| AuctionWhitelistItem {
                 address: *resolver,
-                allow_from: if is_exclusive { 0 } else { auction_start_time },
-            }
-        })
-        .collect()
+                allow_from: 0,
+            })
+            .collect()
+    }
 }
 
 pub struct EscrowParams {
@@ -198,6 +209,7 @@ pub struct EscrowParams {
     timelocks: TimeLocks,
 }
 
+//
 #[derive(Clone, Debug)]
 pub struct EscrowExtension {
     fusion_extension: FusionExtension,
@@ -287,9 +299,9 @@ impl CrossChainOrder {
         extra: Option<CrossChainExtra>,
     ) -> Self {
         let post_interaction_data = SettlementPostInteractionData::new(SettlementSuffixData {
-            whitelist: details.whitelist,
-            integrator_fee: details.fees.as_ref().map(|f| f.integrator_fee.clone()),
             bank_fee: details.fees.as_ref().and_then(|f| f.bank_fee),
+            integrator_fee: details.fees.as_ref().map(|f| f.integrator_fee.clone()),
+            whitelist: details.whitelist,
             resolving_start_time: details
                 .resolving_start_time
                 .unwrap_or_else(|| Utc::now().timestamp() as u64),

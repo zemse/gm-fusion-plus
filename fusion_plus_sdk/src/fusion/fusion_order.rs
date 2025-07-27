@@ -54,10 +54,6 @@ pub struct FusionOrderExtra {
 #[derive(Clone, Debug)]
 pub struct FusionOrder {
     settlement_extension_contract: Address,
-    // order_info: OrderInfoData,
-    // auction_details: AuctionDetails,
-    // post_interaction_data: SettlementPostInteractionData,
-    // extra: FusionOrderExtra,
     fusion_extension: FusionExtension,
     inner: LimitOrder,
 }
@@ -178,6 +174,6 @@ impl FusionOrder {
     }
 
     pub fn get_order_hash(&self, chain_id: ChainId) -> B256 {
-        return self.inner.get_order_hash(chain_id);
+        self.inner.get_order_hash(chain_id)
     }
 }

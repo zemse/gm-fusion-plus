@@ -26,13 +26,13 @@ impl ExtensionBuilder {
         self
     }
 
-    pub fn with_making_amount_data(mut self, data: Bytes) -> Self {
-        self.making_amount_data = data;
+    pub fn with_making_amount_data(mut self, address: Address, data: Bytes) -> Self {
+        self.making_amount_data = [address.to_vec(), data.to_vec()].concat().into();
         self
     }
 
-    pub fn with_taking_amount_data(mut self, data: Bytes) -> Self {
-        self.taking_amount_data = data;
+    pub fn with_taking_amount_data(mut self, address: Address, data: Bytes) -> Self {
+        self.taking_amount_data = [address.to_vec(), data.to_vec()].concat().into();
         self
     }
 

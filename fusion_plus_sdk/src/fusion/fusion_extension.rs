@@ -31,8 +31,8 @@ impl FusionExtension {
 
         let details_bytes = auction_details.encode();
         builder = builder
-            .with_making_amount_data(details_bytes.clone())
-            .with_taking_amount_data(details_bytes)
+            .with_making_amount_data(settlement_extension_contract, details_bytes.clone())
+            .with_taking_amount_data(settlement_extension_contract, details_bytes)
             .with_post_interaction(Interaction {
                 target: settlement_extension_contract,
                 data: post_interaction_data.encode(),

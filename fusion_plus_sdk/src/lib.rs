@@ -33,9 +33,10 @@ impl FusionPlusSdk {
         Q: Serialize,
         R: DeserializeOwned,
     {
+        let url = format!("{}/{route}", self.base_url);
         let client = reqwest::Client::new();
         let result = client
-            .get(format!("{}/{route}", self.base_url))
+            .get(url)
             .bearer_auth(&self.api_key)
             .query(&params)
             .send()

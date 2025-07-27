@@ -20,8 +20,10 @@ pub async fn main() -> fusion_plus_sdk::Result<()> {
         true,
         Address::ZERO,
     );
+    println!("Quote Request: {quote_request:#?}");
 
     let quote_result = sdk.get_quote(&quote_request).await?;
+    println!("Quote Result: {quote_result:#?}");
 
     let secrets_count = quote_result.recommended_preset().secrets_count;
     let secrets: Vec<B256> = (0..secrets_count).map(|_| get_random_bytes32()).collect();
