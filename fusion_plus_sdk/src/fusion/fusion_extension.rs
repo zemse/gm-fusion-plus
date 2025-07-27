@@ -6,7 +6,7 @@ use crate::{
         settlement_post_interaction::SettlementPostInteractionData,
     },
     limit::{
-        extension::{Extension, ExtensionBuilder},
+        extension::{Extension, ExtensionBuildable, ExtensionBuilder},
         interaction::Interaction,
     },
 };
@@ -50,12 +50,15 @@ impl FusionExtension {
             maker_permit,
         }
     }
+}
 
-    pub fn build(&self) -> Extension {
+impl ExtensionBuildable for FusionExtension {
+    fn build(&self) -> Extension {
         self.builder.clone().build()
     }
 }
 
+// TODO seems this is not used anywhere
 // https://github.com/1inch/fusion-sdk/blob/6d40f680a2f1cd0148c314d4c8608a004fffdc09/src/fusion-order/fusion-extension.ts#L19
 pub struct FusionExtensionExtra {
     maker_permit: Interaction,

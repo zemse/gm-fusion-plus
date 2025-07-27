@@ -1,4 +1,6 @@
 pub mod error;
+pub mod escrow_extension;
+pub mod time_locks;
 pub use error::{Error, Result};
 pub mod addresses;
 pub mod chain_id;

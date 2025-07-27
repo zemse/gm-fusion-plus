@@ -6,16 +6,17 @@ use serde::Serialize;
 use crate::{
     FusionPlusSdk,
     chain_id::ChainId,
-    constants::{NATIVE_CURRENCY, UINT_40_MAX, UINT_128_MAX},
+    constants::UINT_40_MAX,
+    escrow_extension::EscrowExtension,
     fusion::{
         auction_details::{AuctionDetails, AuctionWhitelistItem},
-        fusion_extension::FusionExtension,
         fusion_order::{FusionOrder, FusionOrderExtra, IntegratorFee},
         settlement_post_interaction::{SettlementPostInteractionData, SettlementSuffixData},
     },
     hash_lock::HashLock,
     limit::{interaction::Interaction, order_info::OrderInfoData},
-    quote::{QuoteRequest, QuoteResult, TimeLocks, preset::PresetType},
+    quote::{QuoteRequest, QuoteResult, preset::PresetType},
+    time_locks::TimeLocks,
     utils::bps::Bps,
 };
 
@@ -209,58 +210,6 @@ pub struct EscrowParams {
     timelocks: TimeLocks,
 }
 
-//
-#[derive(Clone, Debug)]
-pub struct EscrowExtension {
-    fusion_extension: FusionExtension,
-    hash_lock_info: HashLock,
-    dst_chain_id: ChainId,
-    dst_token: Address,
-    src_safety_deposit: U256,
-    dst_safety_deposit: U256,
-    time_locks: TimeLocks,
-}
-
-impl EscrowExtension {
-    #[allow(clippy::too_many_arguments)]
-    pub fn new(
-        escrow_factory: Address,
-        auction_details: AuctionDetails,
-        post_interaction_data: SettlementPostInteractionData,
-        maker_permit: Option<Interaction>,
-        hash_lock_info: HashLock,
-        dst_chain_id: ChainId,
-        mut dst_token: Address,
-        src_safety_deposit: U256,
-        dst_safety_deposit: U256,
-        time_locks: TimeLocks,
-    ) -> Self {
-        assert!(src_safety_deposit <= UINT_128_MAX);
-        assert!(dst_safety_deposit <= UINT_128_MAX);
-
-        let fusion_extension = FusionExtension::new(
-            escrow_factory,
-            auction_details,
-            post_interaction_data,
-            maker_permit,
-        );
-
-        if dst_token == Address::ZERO {
-            dst_token = NATIVE_CURRENCY;
-        }
-
-        Self {
-            fusion_extension,
-            hash_lock_info,
-            dst_chain_id,
-            dst_token,
-            src_safety_deposit,
-            dst_safety_deposit,
-            time_locks,
-        }
-    }
-}
-
 pub struct DetailsFees {
     integrator_fee: IntegratorFee,
     bank_fee: Option<u64>,
@@ -286,8 +235,7 @@ pub struct CrossChainExtra {
 
 #[derive(Clone, Debug)]
 pub struct CrossChainOrder {
-    escrow_extension: EscrowExtension,
-    inner: FusionOrder,
+    inner: FusionOrder<EscrowExtension>,
 }
 
 impl CrossChainOrder {
@@ -340,16 +288,14 @@ impl CrossChainOrder {
         order_info: OrderInfoData,
         extra: Option<CrossChainExtra>,
     ) -> Self {
-        let fusion_extension = extension.fusion_extension.clone();
         Self {
-            escrow_extension: extension.clone(),
-            inner: FusionOrder::new(
+            inner: FusionOrder::new_with_extension(
                 extension.fusion_extension.settlement_extension_contract,
                 order_info,
-                extension.fusion_extension.auction_details,
-                extension.fusion_extension.post_interaction_data,
+                extension.fusion_extension.auction_details.clone(),
+                extension.fusion_extension.post_interaction_data.clone(),
                 extra.map(Into::into),
-                Some(fusion_extension),
+                extension,
             ),
         }
     }

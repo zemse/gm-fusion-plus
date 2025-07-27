@@ -1,10 +1,6 @@
-use alloy::{
-    hex,
-    primitives::{Address, Bytes, U256},
-};
+use alloy::primitives::{Address, Bytes, U256};
 
 use crate::{
-    constants::UINT_16_MAX,
     fusion::{auction_details::AuctionWhitelistItem, fusion_order::IntegratorFee},
     utils::{bit_mask::BitMask, bytes_builder::BytesBuilder},
     whitelist::{WhitelistItem, WhitelistItemIntermediate},

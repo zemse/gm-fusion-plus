@@ -1,6 +1,12 @@
+use std::fmt::Debug;
+
 use alloy::primitives::{Address, B256, Bytes, U64, keccak256};
 
 use crate::limit::interaction::Interaction;
+
+pub trait ExtensionBuildable: Clone + Debug {
+    fn build(&self) -> Extension;
+}
 
 #[derive(Clone, Debug, Default)]
 pub struct ExtensionBuilder {
@@ -114,6 +120,11 @@ impl Extension {
             &self.pre_interaction,
             &self.post_interaction,
         ]
+    }
+
+    pub fn append_post_interaction(mut self, bytes: Bytes) -> Self {
+        self.post_interaction = [self.post_interaction.clone(), bytes].concat().into();
+        self
     }
 
     pub fn encode(&self) -> Bytes {

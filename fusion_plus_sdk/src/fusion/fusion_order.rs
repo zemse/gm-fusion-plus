@@ -8,8 +8,8 @@ use crate::{
         source_track::inject_track_code,
     },
     limit::{
-        interaction::Interaction, limit_order::LimitOrder, maker_traits::MakerTraits,
-        order_info::OrderInfoData,
+        extension::ExtensionBuildable, interaction::Interaction, limit_order::LimitOrder,
+        maker_traits::MakerTraits, order_info::OrderInfoData,
     },
     utils::bps::Bps,
 };
@@ -52,20 +52,51 @@ pub struct FusionOrderExtra {
 }
 
 #[derive(Clone, Debug)]
-pub struct FusionOrder {
+pub struct FusionOrder<E: ExtensionBuildable> {
     settlement_extension_contract: Address,
-    fusion_extension: FusionExtension,
+    extension: E,
     inner: LimitOrder,
 }
 
-impl FusionOrder {
+impl FusionOrder<FusionExtension> {
     pub fn new(
         settlement_extension_contract: Address,
         order_info: OrderInfoData,
         auction_details: AuctionDetails,
         post_interaction_data: SettlementPostInteractionData,
         extra: Option<FusionOrderExtra>,
-        fusion_extension: Option<FusionExtension>,
+    ) -> Self {
+        let maker_permit = extra
+            .as_ref()
+            .and_then(|extra| extra.permit.as_ref())
+            .map(|permit| Interaction {
+                target: order_info.maker_asset,
+                data: permit.clone(),
+            });
+        Self::new_with_extension(
+            settlement_extension_contract,
+            order_info,
+            auction_details.clone(),
+            post_interaction_data.clone(),
+            extra,
+            FusionExtension::new(
+                settlement_extension_contract,
+                auction_details.clone(),
+                post_interaction_data,
+                maker_permit,
+            ),
+        )
+    }
+}
+
+impl<E: ExtensionBuildable> FusionOrder<E> {
+    pub fn new_with_extension(
+        settlement_extension_contract: Address,
+        order_info: OrderInfoData,
+        auction_details: AuctionDetails,
+        post_interaction_data: SettlementPostInteractionData,
+        extra: Option<FusionOrderExtra>,
+        extension: E,
     ) -> Self {
         let extra_default = FusionOrderExtra {
             unwrap_weth: Some(false),
@@ -80,18 +111,6 @@ impl FusionOrder {
         };
 
         let extra = extra.unwrap_or(extra_default.clone());
-
-        let fusion_extension = fusion_extension.unwrap_or_else(|| {
-            FusionExtension::new(
-                settlement_extension_contract,
-                auction_details.clone(),
-                post_interaction_data.clone(),
-                extra.permit.map(|permit| Interaction {
-                    target: order_info.maker_asset,
-                    data: permit,
-                }),
-            )
-        });
 
         let unwrap_weth = extra.unwrap_weth.or(extra_default.unwrap_weth).unwrap();
         let allow_partial_fills = extra
@@ -150,7 +169,8 @@ impl FusionOrder {
             order_info.receiver.unwrap_or(order_info.maker)
         };
 
-        let built_extension = fusion_extension.build();
+        let built_extension = extension.build();
+
         let salt = LimitOrder::build_salt(&built_extension, order_info.salt);
         let salt_with_injected_track_code = if let Some(salt) = order_info.salt {
             salt
@@ -168,7 +188,7 @@ impl FusionOrder {
 
         Self {
             settlement_extension_contract,
-            fusion_extension,
+            extension,
             inner,
         }
     }

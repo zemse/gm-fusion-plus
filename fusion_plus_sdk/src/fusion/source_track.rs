@@ -25,7 +25,7 @@ fn get_track_code_for_source(source: &str) -> U256 {
             .expect("Invalid hex string");
     }
 
-    return create_id(source);
+    create_id(source)
 }
 
 fn create_id(source: &str) -> U256 {

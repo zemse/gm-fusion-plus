@@ -7,6 +7,7 @@ use crate::{
     FusionPlusSdk,
     chain_id::ChainId,
     quote::preset::{Preset, PresetType},
+    time_locks::TimeLocks,
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -62,18 +63,6 @@ pub struct QuotePresets {
 pub struct GasCostConfig {
     pub gas_bump_estimate: u64,
     pub gas_price_estimate: U256,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TimeLocks {
-    pub src_withdrawal: usize,
-    pub src_public_withdrawal: usize,
-    pub src_cancellation: usize,
-    pub src_public_cancellation: usize,
-    pub dst_withdrawal: usize,
-    pub dst_public_withdrawal: usize,
-    pub dst_cancellation: usize,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

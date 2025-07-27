@@ -104,7 +104,7 @@ impl LimitOrder {
     }
 
     pub fn build_salt(extension: &Extension, base_salt: Option<U256>) -> U256 {
-        let base_salt = base_salt.unwrap_or_else(|| get_random_uint::<12>());
+        let base_salt = base_salt.unwrap_or_else(get_random_uint::<12>);
 
         if extension.is_empty() {
             return base_salt;

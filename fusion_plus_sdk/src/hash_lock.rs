@@ -7,7 +7,7 @@ use serde::Serialize;
 
 #[derive(Clone, Debug)]
 pub struct HashLock {
-    pub hash: B256,
+    hash: B256,
 }
 
 impl Serialize for HashLock {
@@ -22,6 +22,10 @@ impl Serialize for HashLock {
 impl HashLock {
     pub fn new(hash: B256) -> Self {
         HashLock { hash }
+    }
+
+    pub fn value(&self) -> B256 {
+        self.hash
     }
 
     pub fn hash_secret(secret: &B256) -> B256 {
