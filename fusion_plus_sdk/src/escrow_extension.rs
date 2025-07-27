@@ -18,6 +18,15 @@ use crate::{
     time_locks::TimeLocks,
 };
 
+pub struct EscrowParams {
+    pub hash_lock: HashLock,
+    pub src_chain_id: ChainId,
+    pub dst_chain_id: ChainId,
+    pub src_safety_deposit: U256,
+    pub dst_safety_deposit: U256,
+    pub timelocks: TimeLocks,
+}
+
 #[derive(Clone, Debug)]
 pub struct EscrowExtension {
     pub fusion_extension: FusionExtension,
@@ -30,21 +39,16 @@ pub struct EscrowExtension {
 }
 
 impl EscrowExtension {
-    #[allow(clippy::too_many_arguments)]
     pub fn new(
         escrow_factory: Address,
         auction_details: AuctionDetails,
         post_interaction_data: SettlementPostInteractionData,
         maker_permit: Option<Interaction>,
-        hash_lock_info: HashLock,
-        dst_chain_id: ChainId,
         mut dst_token: Address,
-        src_safety_deposit: U256,
-        dst_safety_deposit: U256,
-        time_locks: TimeLocks,
+        escrow_params: EscrowParams,
     ) -> Self {
-        assert!(src_safety_deposit <= UINT_128_MAX);
-        assert!(dst_safety_deposit <= UINT_128_MAX);
+        assert!(escrow_params.src_safety_deposit <= UINT_128_MAX);
+        assert!(escrow_params.dst_safety_deposit <= UINT_128_MAX);
 
         let fusion_extension = FusionExtension::new(
             escrow_factory,
@@ -59,12 +63,12 @@ impl EscrowExtension {
 
         Self {
             fusion_extension,
-            hash_lock_info,
-            dst_chain_id,
+            hash_lock_info: escrow_params.hash_lock,
+            dst_chain_id: escrow_params.dst_chain_id,
             dst_token,
-            src_safety_deposit,
-            dst_safety_deposit,
-            time_locks,
+            src_safety_deposit: escrow_params.src_safety_deposit,
+            dst_safety_deposit: escrow_params.dst_safety_deposit,
+            time_locks: escrow_params.timelocks,
         }
     }
 

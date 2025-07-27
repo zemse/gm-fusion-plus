@@ -1,5 +1,5 @@
 use alloy::primitives::{Address, U256, address};
-use fusion_plus_sdk::{FusionPlusSdk, chain_id::ChainId, quote::QuoteRequest};
+use fusion_plus_sdk::{chain_id::ChainId, quote::QuoteRequest, sdk::FusionPlusSdk};
 
 #[tokio::main]
 async fn main() -> fusion_plus_sdk::Result<()> {

@@ -1,13 +1,12 @@
-use alloy::primitives::{Address, B256, Bytes, U256};
+use alloy::primitives::{Address, B256, Bytes};
 use chrono::Utc;
 use rand::Rng;
 use serde::Serialize;
 
 use crate::{
-    FusionPlusSdk,
     chain_id::ChainId,
     constants::UINT_40_MAX,
-    escrow_extension::EscrowExtension,
+    escrow_extension::{EscrowExtension, EscrowParams},
     fusion::{
         auction_details::{AuctionDetails, AuctionWhitelistItem},
         fusion_order::{FusionOrder, FusionOrderExtra, IntegratorFee},
@@ -16,20 +15,8 @@ use crate::{
     hash_lock::HashLock,
     limit::{interaction::Interaction, order_info::OrderInfoData},
     quote::{QuoteRequest, QuoteResult, preset::PresetType},
-    time_locks::TimeLocks,
     utils::bps::Bps,
 };
-
-#[derive(Debug, Serialize)]
-pub struct OrderParams {
-    #[serde(rename = "walletAddress")]
-    pub dst_address: Address,
-
-    #[serde(rename = "hashLock")]
-    pub hash_lock: HashLock,
-
-    pub secret_hashes: Vec<B256>,
-}
 
 #[derive(Clone, Debug)]
 pub struct PreparedOrder {
@@ -38,17 +25,11 @@ pub struct PreparedOrder {
     pub quote_id: String,
 }
 
-pub struct Fee {
-    pub taking_fee_bps: u16,
-    pub taking_fee_receiver: Address,
-}
-
-impl FusionPlusSdk {
-    pub fn create_order(
-        &self,
+impl PreparedOrder {
+    pub fn from_quote(
         quote_request: &QuoteRequest,
         quote_result: &QuoteResult,
-        order_params: OrderParams,
+        order_params: CrossChainOrderParams,
     ) -> crate::Result<PreparedOrder> {
         let Some(quote_id) = &quote_result.quote_id else {
             return Err(crate::Error::InternalErrorStr(
@@ -56,7 +37,7 @@ impl FusionPlusSdk {
             ));
         };
 
-        let order = create_order(
+        let order = CrossChainOrder::from_quote(
             quote_request,
             quote_result,
             CrossChainOrderParamsData {
@@ -80,7 +61,22 @@ impl FusionPlusSdk {
             quote_id: quote_id.clone(),
         })
     }
-    pub async fn place_order(&self, quote: QuoteResult, order_params: OrderParams) {}
+}
+
+#[derive(Debug, Serialize)]
+pub struct CrossChainOrderParams {
+    #[serde(rename = "walletAddress")]
+    pub dst_address: Address,
+
+    #[serde(rename = "hashLock")]
+    pub hash_lock: HashLock,
+
+    pub secret_hashes: Vec<B256>,
+}
+
+pub struct Fee {
+    pub taking_fee_bps: u16,
+    pub taking_fee_receiver: Address,
 }
 
 // https://github.com/1inch/cross-chain-sdk/blob/25ac3927c706a43e85f2f08cc9d9a3bdf156e1e9/src/api/quoter/quote/types.ts#L5
@@ -94,120 +90,6 @@ pub struct CrossChainOrderParamsData {
     taking_fee_receiver: Option<Address>,
     delay_auction_start_time_by: Option<u64>,
     order_expiration_delay: Option<u64>,
-}
-
-pub fn create_order(
-    quote_request: &QuoteRequest,
-    quote_result: &QuoteResult,
-    params: CrossChainOrderParamsData,
-) -> CrossChainOrder {
-    let preset = params
-        .preset
-        .and_then(|preset| quote_result.get_preset(preset))
-        .unwrap_or_else(|| quote_result.recommended_preset());
-
-    let auction_details = preset.create_auction_details(params.delay_auction_start_time_by);
-
-    let allow_partial_fills = preset.allow_partial_fills;
-    let allow_multiple_fills = preset.allow_multiple_fills;
-    let is_nonce_required = !allow_partial_fills || !allow_multiple_fills;
-
-    let nonce = if is_nonce_required {
-        params.nonce.or_else(|| {
-            let mut rng = rand::rng();
-            Some(rng.random_range(0..UINT_40_MAX))
-        })
-    } else {
-        params.nonce
-    };
-
-    let taker_asset = quote_request.dst_token_address;
-
-    let whitelist = get_whitelist(
-        quote_result,
-        auction_details.start_time,
-        preset.exclusive_resolver.as_ref(),
-    );
-
-    CrossChainOrder::new(
-        quote_result.src_escrow_factory,
-        OrderInfoData {
-            maker_asset: quote_request.src_token_address,
-            taker_asset,
-            making_amount: quote_result.src_token_amount,
-            taking_amount: quote_result.dst_token_amount,
-            maker: quote_request.maker_address,
-            receiver: params.receiver,
-            salt: None,
-        },
-        EscrowParams {
-            hash_lock: params.hash_lock,
-            src_chain_id: quote_request.src_chain_id,
-            dst_chain_id: quote_request.dst_chain_id,
-            src_safety_deposit: quote_result.src_safety_deposit,
-            dst_safety_deposit: quote_result.dst_safety_deposit,
-            timelocks: quote_result.time_locks.clone(),
-        },
-        Details {
-            auction: auction_details,
-            fees: Some(DetailsFees {
-                integrator_fee: IntegratorFee {
-                    receiver: params.taking_fee_receiver.unwrap_or_default(),
-                    ratio: Bps::to_ratio_format(quote_request.fee) as u16,
-                },
-                bank_fee: Some(0),
-            }),
-            whitelist,
-            resolving_start_time: None,
-        },
-        Some(CrossChainExtra {
-            nonce,
-            permit: params.permit,
-            order_expiration_delay: params.order_expiration_delay,
-            enable_permit2: Some(params.is_permit_2),
-            source: quote_request.source.clone(),
-            allow_multiple_fills: Some(allow_multiple_fills),
-            allow_partial_fills: Some(allow_partial_fills),
-        }),
-    )
-}
-
-fn get_whitelist(
-    quote_result: &QuoteResult,
-    auction_start_time: u64,
-    exclusive_resolver: Option<&Address>,
-) -> Vec<AuctionWhitelistItem> {
-    if let Some(exclusive_resolver) = exclusive_resolver {
-        quote_result
-            .whitelist
-            .iter()
-            .map(|resolver| {
-                let is_exclusive = exclusive_resolver == resolver;
-                AuctionWhitelistItem {
-                    address: *resolver,
-                    allow_from: if is_exclusive { 0 } else { auction_start_time },
-                }
-            })
-            .collect()
-    } else {
-        quote_result
-            .whitelist
-            .iter()
-            .map(|resolver| AuctionWhitelistItem {
-                address: *resolver,
-                allow_from: 0,
-            })
-            .collect()
-    }
-}
-
-pub struct EscrowParams {
-    hash_lock: HashLock,
-    src_chain_id: ChainId,
-    dst_chain_id: ChainId,
-    src_safety_deposit: U256,
-    dst_safety_deposit: U256,
-    timelocks: TimeLocks,
 }
 
 pub struct DetailsFees {
@@ -239,6 +121,81 @@ pub struct CrossChainOrder {
 }
 
 impl CrossChainOrder {
+    pub fn from_quote(
+        quote_request: &QuoteRequest,
+        quote_result: &QuoteResult,
+        params: CrossChainOrderParamsData,
+    ) -> CrossChainOrder {
+        let preset = params
+            .preset
+            .and_then(|preset| quote_result.get_preset(preset))
+            .unwrap_or_else(|| quote_result.recommended_preset());
+
+        let auction_details = preset.create_auction_details(params.delay_auction_start_time_by);
+
+        let allow_partial_fills = preset.allow_partial_fills;
+        let allow_multiple_fills = preset.allow_multiple_fills;
+        let is_nonce_required = !allow_partial_fills || !allow_multiple_fills;
+
+        let nonce = if is_nonce_required {
+            params.nonce.or_else(|| {
+                let mut rng = rand::rng();
+                Some(rng.random_range(0..UINT_40_MAX))
+            })
+        } else {
+            params.nonce
+        };
+
+        let taker_asset = quote_request.dst_token_address;
+
+        let whitelist = quote_result.get_whitelist(
+            auction_details.start_time,
+            preset.exclusive_resolver.as_ref(),
+        );
+
+        CrossChainOrder::new(
+            quote_result.src_escrow_factory,
+            OrderInfoData {
+                maker_asset: quote_request.src_token_address,
+                taker_asset,
+                making_amount: quote_result.src_token_amount,
+                taking_amount: quote_result.dst_token_amount,
+                maker: quote_request.maker_address,
+                receiver: params.receiver,
+                salt: None,
+            },
+            EscrowParams {
+                hash_lock: params.hash_lock,
+                src_chain_id: quote_request.src_chain_id,
+                dst_chain_id: quote_request.dst_chain_id,
+                src_safety_deposit: quote_result.src_safety_deposit,
+                dst_safety_deposit: quote_result.dst_safety_deposit,
+                timelocks: quote_result.time_locks.clone(),
+            },
+            Details {
+                auction: auction_details,
+                fees: Some(DetailsFees {
+                    integrator_fee: IntegratorFee {
+                        receiver: params.taking_fee_receiver.unwrap_or_default(),
+                        ratio: Bps::to_ratio_format(quote_request.fee) as u16,
+                    },
+                    bank_fee: Some(0),
+                }),
+                whitelist,
+                resolving_start_time: None,
+            },
+            Some(CrossChainExtra {
+                nonce,
+                permit: params.permit,
+                order_expiration_delay: params.order_expiration_delay,
+                enable_permit2: Some(params.is_permit_2),
+                source: quote_request.source.clone(),
+                allow_multiple_fills: Some(allow_multiple_fills),
+                allow_partial_fills: Some(allow_partial_fills),
+            }),
+        )
+    }
+
     pub fn new(
         src_escrow_factory: Address,
         order_info: OrderInfoData, // CrossChainOrderInfo,
@@ -256,6 +213,11 @@ impl CrossChainOrder {
             custom_receiver: order_info.receiver,
         });
 
+        assert!(
+            escrow_params.src_chain_id != escrow_params.dst_chain_id,
+            "src and dst chain ids must be different"
+        );
+
         let ext = EscrowExtension::new(
             src_escrow_factory,
             details.auction,
@@ -267,23 +229,14 @@ impl CrossChainOrder {
                     target: order_info.maker_asset,
                     data: permit.clone(),
                 }),
-            escrow_params.hash_lock,
-            escrow_params.dst_chain_id,
             order_info.taker_asset,
-            escrow_params.src_safety_deposit,
-            escrow_params.dst_safety_deposit,
-            escrow_params.timelocks,
+            escrow_params,
         );
 
-        assert!(
-            escrow_params.src_chain_id != escrow_params.dst_chain_id,
-            "src and dst chain ids must be different"
-        );
-
-        Self::new_internal(ext, order_info, extra)
+        Self::new_from_extension(ext, order_info, extra)
     }
 
-    fn new_internal(
+    fn new_from_extension(
         extension: EscrowExtension,
         order_info: OrderInfoData,
         extra: Option<CrossChainExtra>,

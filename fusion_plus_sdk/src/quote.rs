@@ -4,8 +4,8 @@ use alloy::primitives::{Address, Bytes, U256};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    FusionPlusSdk,
     chain_id::ChainId,
+    fusion::auction_details::AuctionWhitelistItem,
     quote::preset::{Preset, PresetType},
     time_locks::TimeLocks,
 };
@@ -78,16 +78,6 @@ pub struct TokenPair {
     pub dst_token: String,
 }
 
-impl FusionPlusSdk {
-    pub async fn get_quote(&self, params: &QuoteRequest) -> crate::Result<QuoteResult> {
-        let result = self
-            .perform_get("quoter/v1.0/quote/receive", params)
-            .await?;
-
-        Ok(result)
-    }
-}
-
 impl QuoteRequest {
     pub fn new(
         src_chain_id: impl Into<ChainId>,
@@ -126,6 +116,33 @@ impl QuoteResult {
             PresetType::Medium => Some(&self.presets.medium),
             PresetType::Slow => Some(&self.presets.slow),
             PresetType::Custom => self.presets.custom.as_ref(),
+        }
+    }
+
+    pub fn get_whitelist(
+        &self,
+        auction_start_time: u64,
+        exclusive_resolver: Option<&Address>,
+    ) -> Vec<AuctionWhitelistItem> {
+        if let Some(exclusive_resolver) = exclusive_resolver {
+            self.whitelist
+                .iter()
+                .map(|resolver| {
+                    let is_exclusive = exclusive_resolver == resolver;
+                    AuctionWhitelistItem {
+                        address: *resolver,
+                        allow_from: if is_exclusive { 0 } else { auction_start_time },
+                    }
+                })
+                .collect()
+        } else {
+            self.whitelist
+                .iter()
+                .map(|resolver| AuctionWhitelistItem {
+                    address: *resolver,
+                    allow_from: 0,
+                })
+                .collect()
         }
     }
 }
