@@ -18,7 +18,7 @@ pub async fn main() -> fusion_plus_sdk::Result<()> {
 
     let api = Api::new(
         "https://api.1inch.dev/fusion-plus",
-        std::env::var("1INCH_API_KEY").expect("1INCH_API_KEY not set in .env file"),
+        std::env::var("ONEINCH_API_KEY").expect("ONEINCH_API_KEY not set in .env file"),
     );
 
     let wallet = PrivateKeySigner::random();
