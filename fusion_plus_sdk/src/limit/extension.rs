@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use alloy::primitives::{Address, B256, Bytes, U64, keccak256};
+use alloy::primitives::{Address, B256, Bytes, U256, keccak256};
 
 use crate::limit::interaction::Interaction;
 
@@ -133,12 +133,12 @@ impl Extension {
         } else {
             let all_interactions = self.get_all();
             let offsets = {
-                let mut value = U64::ZERO;
+                let mut value = U256::ZERO;
                 let mut sum = 0;
                 for (i, interaction) in all_interactions.iter().enumerate() {
                     sum += interaction.len();
 
-                    value |= U64::from(sum) << (i * 32);
+                    value |= U256::from(sum) << (i * 32);
                 }
                 value
             };
@@ -150,7 +150,7 @@ impl Extension {
                 });
 
             [
-                offsets.to_be_bytes::<8>().into(),
+                offsets.to_be_bytes::<32>().into(),
                 concat,
                 self.custom_data.clone(),
             ]
