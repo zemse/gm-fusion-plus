@@ -13,7 +13,7 @@ use crate::{
         settlement_post_interaction::{SettlementPostInteractionData, SettlementSuffixData},
     },
     hash_lock::HashLock,
-    limit::{interaction::Interaction, order_info::OrderInfoData},
+    limit::{eip712::LimitOrderV4, interaction::Interaction, order_info::OrderInfoData},
     quote::{QuoteRequest, QuoteResult, preset::PresetType},
     utils::bps::Bps,
 };
@@ -66,6 +66,10 @@ impl PreparedOrder {
 
     pub fn eip712_signing_hash(&self) -> B256 {
         self.order.inner.get_order_hash(self.src_chain_id)
+    }
+
+    pub fn to_v4(&self) -> LimitOrderV4 {
+        self.order.inner.inner.to_v4()
     }
 }
 

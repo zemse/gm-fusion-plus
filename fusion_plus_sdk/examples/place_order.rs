@@ -3,19 +3,22 @@ use alloy::{
     signers::{Signer, local::PrivateKeySigner},
 };
 use fusion_plus_sdk::{
+    api::Api,
     chain_id::ChainId,
     cross_chain_order::{CrossChainOrderParams, PreparedOrder},
     hash_lock::HashLock,
     quote::QuoteRequest,
-    sdk::FusionPlusSdk,
+    relayer_request::RelayerRequest,
     utils::random::get_random_bytes32,
 };
 
 #[tokio::main]
 pub async fn main() -> fusion_plus_sdk::Result<()> {
-    let sdk = FusionPlusSdk::new(
+    dotenvy::dotenv().ok();
+
+    let api = Api::new(
         "https://api.1inch.dev/fusion-plus",
-        "wIjShzXW71PD87qE4AyqZEvwBqyMmw4c",
+        std::env::var("1INCH_API_KEY").expect("1INCH_API_KEY not set in .env file"),
     );
 
     let wallet = PrivateKeySigner::random();
@@ -31,7 +34,7 @@ pub async fn main() -> fusion_plus_sdk::Result<()> {
     );
     // println!("Quote Request: {quote_request:#?}");
 
-    let quote_result = sdk.get_quote(&quote_request).await?;
+    let quote_result = api.get_quote(&quote_request).await?;
     // println!("Quote Result: {quote_result:#?}");
 
     let secrets_count = quote_result.recommended_preset().secrets_count;
@@ -75,7 +78,15 @@ pub async fn main() -> fusion_plus_sdk::Result<()> {
         .await
         .unwrap();
 
-    let result = sdk.submit_order(&order, &secret_hashes, &signature).await;
+    let rr = RelayerRequest::from_prepared_order(
+        &order,
+        signature,
+        quote_result.quote_id.clone().unwrap(),
+        Some(secret_hashes),
+    );
+
+    let result = api.submit_order(rr).await;
+    println!("submit_order result: {result:?}");
 
     Ok(())
 }

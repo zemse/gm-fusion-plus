@@ -1,14 +1,16 @@
 use alloy::primitives::{Address, U256, address};
-use fusion_plus_sdk::{chain_id::ChainId, quote::QuoteRequest, sdk::FusionPlusSdk};
+use fusion_plus_sdk::{api::Api, chain_id::ChainId, quote::QuoteRequest};
 
 #[tokio::main]
 async fn main() -> fusion_plus_sdk::Result<()> {
-    let sdk = FusionPlusSdk::new(
+    dotenvy::from_path("../.env").unwrap();
+
+    let api = Api::new(
         "https://api.1inch.dev/fusion-plus",
-        "wIjShzXW71PD87qE4AyqZEvwBqyMmw4c",
+        std::env::var("ONEINCH_API_KEY").expect("ONEINCH_API_KEY not set in .env file"),
     );
 
-    let result = sdk
+    let result = api
         .get_quote(&QuoteRequest::new(
             ChainId::Ethereum,
             ChainId::Arbitrum,

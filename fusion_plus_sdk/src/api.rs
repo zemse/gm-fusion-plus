@@ -5,20 +5,38 @@ use crate::{
     Error,
     cross_chain_order::PreparedOrder,
     quote::{QuoteRequest, QuoteResult},
+    relayer_request::RelayerRequest,
     utils::serde_response_custom_parser::SerdeResponseParse,
 };
 
-pub struct FusionPlusSdk {
+pub struct Api {
     pub base_url: String,
     pub api_key: String,
 }
 
-impl FusionPlusSdk {
+impl Api {
     pub fn new(base_url: impl Into<String>, api_key: impl Into<String>) -> Self {
-        FusionPlusSdk {
+        Api {
             base_url: base_url.into(),
             api_key: api_key.into(),
         }
+    }
+
+    pub async fn get_quote(&self, params: &QuoteRequest) -> crate::Result<QuoteResult> {
+        let result = self
+            .perform_get("quoter/v1.0/quote/receive", params)
+            .await?;
+
+        Ok(result)
+    }
+
+    pub async fn submit_order(&self, relayer_request: RelayerRequest) -> crate::Result<()> {
+        println!(
+            "Submitting order to relayer: {:#?}",
+            serde_json::to_string_pretty(&relayer_request)
+        );
+        self.perform_post("relayer/v1.0/submit", relayer_request)
+            .await
     }
 
     async fn perform_get<Q, R>(&self, route: &str, params: Q) -> crate::Result<R>
@@ -43,15 +61,29 @@ impl FusionPlusSdk {
         }
     }
 
-    pub async fn get_quote(&self, params: &QuoteRequest) -> crate::Result<QuoteResult> {
-        let result = self
-            .perform_get("quoter/v1.0/quote/receive", params)
+    async fn perform_post<B, R>(&self, route: &str, body: B) -> crate::Result<R>
+    where
+        B: Serialize,
+        R: DeserializeOwned,
+    {
+        let url = format!("{}/{route}", self.base_url);
+        let client = reqwest::Client::new();
+        let result = client
+            .post(url)
+            .bearer_auth(&self.api_key)
+            .json(&body)
+            .send()
             .await?;
-
-        Ok(result)
+        if result.status().is_success() {
+            let response: R = result.serde_parse_custom().await?;
+            Ok(response)
+        } else {
+            let error_text = result.text().await?;
+            Err(Error::InternalError(error_text))
+        }
     }
 
-    pub async fn submit_order(
+    pub async fn submit_order_x(
         &self,
         prepared_order: &PreparedOrder,
         secret_hashes: &Vec<B256>,
