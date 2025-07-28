@@ -48,7 +48,6 @@ impl LimitOrder {
                 .unwrap_or_else(|| LimitOrder::build_salt(&extension, None)),
             &extension,
         );
-        // let built_extension = extension.build();
 
         if !extension.is_empty() {
             maker_traits = maker_traits.with_extension();
@@ -97,7 +96,7 @@ impl LimitOrder {
             "invalid salt: lowest 160 bits should be extension hash"
         );
 
-        hash
+        salt
     }
 
     pub fn build_salt(extension: &Extension, base_salt: Option<U256>) -> U256 {

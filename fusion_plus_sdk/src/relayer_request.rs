@@ -11,6 +11,7 @@ use crate::{
 };
 
 #[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct RelayerRequest {
     pub src_chain_id: ChainId,
     pub order: LimitOrderV4,

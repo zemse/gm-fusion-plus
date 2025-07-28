@@ -85,6 +85,7 @@ pub async fn main() -> fusion_plus_sdk::Result<()> {
         Some(secret_hashes),
     );
 
+    println!("Relayer Request: {rr:#?}");
     let result = api.submit_order(rr).await;
     println!("submit_order result: {result:?}");
 
