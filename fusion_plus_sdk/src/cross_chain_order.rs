@@ -20,6 +20,7 @@ use crate::{
 
 #[derive(Clone, Debug)]
 pub struct PreparedOrder {
+    pub src_chain_id: ChainId,
     pub order: CrossChainOrder,
     pub hash: B256,
     pub quote_id: String,
@@ -56,10 +57,15 @@ impl PreparedOrder {
         let hash = order.get_order_hash(quote_request.src_chain_id);
 
         Ok(PreparedOrder {
+            src_chain_id: quote_request.src_chain_id,
             order,
             hash,
             quote_id: quote_id.clone(),
         })
+    }
+
+    pub fn eip712_signing_hash(&self) -> B256 {
+        self.order.inner.get_order_hash(self.src_chain_id)
     }
 }
 
@@ -117,7 +123,7 @@ pub struct CrossChainExtra {
 
 #[derive(Clone, Debug)]
 pub struct CrossChainOrder {
-    inner: FusionOrder<EscrowExtension>,
+    pub inner: FusionOrder<EscrowExtension>,
 }
 
 impl CrossChainOrder {

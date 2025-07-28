@@ -1,9 +1,9 @@
-use alloy::primitives::B256;
+use alloy::{primitives::B256, signers::Signature};
 use serde::{Serialize, de::DeserializeOwned};
 
 use crate::{
     Error,
-    cross_chain_order::{CrossChainOrder, CrossChainOrderParams},
+    cross_chain_order::PreparedOrder,
     quote::{QuoteRequest, QuoteResult},
     utils::serde_response_custom_parser::SerdeResponseParse,
 };
@@ -51,5 +51,19 @@ impl FusionPlusSdk {
         Ok(result)
     }
 
-    pub async fn place_order(&self, quote: QuoteResult, order_params: CrossChainOrderParams) {}
+    pub async fn submit_order(
+        &self,
+        prepared_order: &PreparedOrder,
+        secret_hashes: &Vec<B256>,
+        signature: &Signature,
+    ) {
+        let address = signature
+            .recover_address_from_prehash(&prepared_order.eip712_signing_hash())
+            .unwrap();
+
+        assert_eq!(
+            address, prepared_order.order.inner.inner.maker,
+            "Signature does not match to the order's maker"
+        );
+    }
 }

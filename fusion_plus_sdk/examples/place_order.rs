@@ -1,4 +1,7 @@
-use alloy::primitives::{Address, B256, U64, U256, address, keccak256};
+use alloy::{
+    primitives::{Address, B256, U64, U256, address, keccak256},
+    signers::{Signer, local::PrivateKeySigner},
+};
 use fusion_plus_sdk::{
     chain_id::ChainId,
     cross_chain_order::{CrossChainOrderParams, PreparedOrder},
@@ -15,6 +18,8 @@ pub async fn main() -> fusion_plus_sdk::Result<()> {
         "wIjShzXW71PD87qE4AyqZEvwBqyMmw4c",
     );
 
+    let wallet = PrivateKeySigner::random();
+
     let quote_request = QuoteRequest::new(
         ChainId::Ethereum,
         ChainId::Arbitrum,
@@ -22,7 +27,7 @@ pub async fn main() -> fusion_plus_sdk::Result<()> {
         address!("0xaf88d065e77c8cC2239327C5EDb3A432268e5831"), // USDC arbitrum
         U256::from(100e6),
         true,
-        Address::ZERO,
+        wallet.address(),
     );
     // println!("Quote Request: {quote_request:#?}");
 
@@ -31,7 +36,7 @@ pub async fn main() -> fusion_plus_sdk::Result<()> {
 
     let secrets_count = quote_result.recommended_preset().secrets_count;
     let secrets: Vec<B256> = (0..secrets_count).map(|_| get_random_bytes32()).collect();
-    let secret_hashes = secrets.iter().map(HashLock::hash_secret).collect();
+    let secret_hashes: Vec<B256> = secrets.iter().map(HashLock::hash_secret).collect();
 
     let hash_lock = if secrets_count == 1 {
         HashLock::for_single_fill(&secrets[0])
@@ -58,14 +63,19 @@ pub async fn main() -> fusion_plus_sdk::Result<()> {
         CrossChainOrderParams {
             dst_address: Address::ZERO,
             hash_lock,
-            secret_hashes,
+            secret_hashes: secret_hashes.clone(),
         },
     )
     .unwrap();
 
     println!("Order created: {order:#?}");
 
-    // sdk.submit_order();
+    let signature = wallet
+        .sign_hash(&order.eip712_signing_hash())
+        .await
+        .unwrap();
+
+    let result = sdk.submit_order(&order, &secret_hashes, &signature).await;
 
     Ok(())
 }

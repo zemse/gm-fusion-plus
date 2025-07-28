@@ -53,9 +53,9 @@ pub struct FusionOrderExtra {
 
 #[derive(Clone, Debug)]
 pub struct FusionOrder<E: ExtensionBuildable> {
-    settlement_extension_contract: Address,
-    extension: E,
-    inner: LimitOrder,
+    pub settlement_extension_contract: Address,
+    pub extension: E,
+    pub inner: LimitOrder,
 }
 
 impl FusionOrder<FusionExtension> {

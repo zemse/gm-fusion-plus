@@ -4,9 +4,7 @@ use crate::{
     chain_id::ChainId,
     constants::{NATIVE_CURRENCY, UINT_160_MAX},
     limit::{
-        eip712::{self, get_limit_order_v4_domain, get_order_hash},
-        extension::Extension,
-        maker_traits::MakerTraits,
+        eip712::LimitOrderV4, extension::Extension, maker_traits::MakerTraits,
         order_info::OrderInfoData,
     },
     utils::{alloy::CustomAlloy, random::get_random_uint},
@@ -14,14 +12,14 @@ use crate::{
 
 #[derive(Clone, Debug)]
 pub struct LimitOrder {
-    salt: U256,
-    maker: Address,
-    receiver: Address,
-    maker_asset: Address,
-    taker_asset: Address,
-    making_amount: U256,
-    taking_amount: U256,
-    maker_traits: MakerTraits,
+    pub salt: U256,
+    pub maker: Address,
+    pub receiver: Address,
+    pub maker_asset: Address,
+    pub taker_asset: Address,
+    pub making_amount: U256,
+    pub taking_amount: U256,
+    pub maker_traits: MakerTraits,
 }
 
 impl LimitOrder {
@@ -69,22 +67,21 @@ impl LimitOrder {
         }
     }
 
-    pub fn get_order_hash(&self, chain_id: ChainId) -> B256 {
-        let domain = get_limit_order_v4_domain(chain_id);
+    pub fn to_v4(&self) -> LimitOrderV4 {
+        LimitOrderV4 {
+            salt: self.salt,
+            maker: self.maker,
+            receiver: self.receiver,
+            makerAsset: self.maker_asset,
+            takerAsset: self.taker_asset,
+            makingAmount: self.making_amount,
+            takingAmount: self.taking_amount,
+            makerTraits: self.maker_traits.as_u256(),
+        }
+    }
 
-        get_order_hash(
-            &eip712::Order {
-                salt: self.salt,
-                maker: self.maker,
-                receiver: self.receiver,
-                makerAsset: self.maker_asset,
-                takerAsset: self.taker_asset,
-                makingAmount: self.making_amount,
-                takingAmount: self.taking_amount,
-                makerTraits: self.maker_traits.as_u256(),
-            },
-            &domain,
-        )
+    pub fn get_order_hash(&self, chain_id: ChainId) -> B256 {
+        self.to_v4().get_order_hash(chain_id)
     }
 
     pub fn verify_salt(salt: U256, extension: &Extension) -> U256 {
