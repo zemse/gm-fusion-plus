@@ -58,11 +58,12 @@ pub struct QuotePresets {
     pub custom: Option<Preset>,
 }
 
+#[cfg_attr(test, derive(Default, PartialEq))]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GasCostConfig {
     pub gas_bump_estimate: u64,
-    pub gas_price_estimate: U256,
+    pub gas_price_estimate: U256, // API sends this as a string
 }
 
 #[derive(Debug, Serialize, Deserialize)]

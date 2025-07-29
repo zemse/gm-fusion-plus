@@ -10,6 +10,10 @@ impl BytesBuilder {
         self.value.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.value.is_empty()
+    }
+
     pub fn push_bytes(&mut self, bytes: Bytes) {
         self.value = [self.value.clone(), bytes].concat().into();
     }

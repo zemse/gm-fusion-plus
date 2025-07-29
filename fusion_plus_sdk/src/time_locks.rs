@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::constants::UINT_32_MAX;
 
+#[cfg_attr(test, derive(PartialEq))]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TimeLocks {
@@ -35,7 +36,7 @@ impl TimeLocks {
         assert!(src_withdrawal <= UINT_32_MAX);
         assert!(src_withdrawal < src_public_withdrawal);
         assert!(src_public_withdrawal <= UINT_32_MAX);
-        assert!(src_public_cancellation < src_cancellation);
+        assert!(src_public_withdrawal < src_cancellation);
         assert!(src_cancellation <= UINT_32_MAX);
         assert!(src_cancellation < src_public_cancellation);
         assert!(src_public_cancellation <= UINT_32_MAX);
@@ -57,6 +58,26 @@ impl TimeLocks {
         }
     }
 
+    pub fn from_u256(mut value: U256) -> Self {
+        let mut parts = [0u64; 8];
+
+        for part in parts.as_mut() {
+            *part = (value & U256::from(UINT_32_MAX)).to::<u64>();
+            value >>= 32;
+        }
+
+        TimeLocks {
+            src_withdrawal: parts[0],
+            src_public_withdrawal: parts[1],
+            src_cancellation: parts[2],
+            src_public_cancellation: parts[3],
+            dst_withdrawal: parts[4],
+            dst_public_withdrawal: parts[5],
+            dst_cancellation: parts[6],
+            deployed_at: parts[7],
+        }
+    }
+
     pub fn build(&self) -> U256 {
         let mut value = U256::ZERO;
 
@@ -73,5 +94,18 @@ impl TimeLocks {
             value = (value << 32) | U256::from(prop);
         }
         value
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_time_locks_build() {
+        let time_locks = TimeLocks::new(36, 372, 528, 648, 60, 336, 456, Some(80));
+        let built = time_locks.build();
+        let decoded = TimeLocks::from_u256(built);
+        assert_eq!(time_locks, decoded);
     }
 }

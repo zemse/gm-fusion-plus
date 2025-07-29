@@ -3,6 +3,7 @@ use alloy::primitives::FixedBytes;
 use crate::constants::UINT_16_MAX;
 
 // https://github.com/1inch/fusion-sdk/blob/6d40f680a2f1cd0148c314d4c8608a004fffdc09/src/fusion-order/whitelist/types.ts#L1
+#[cfg_attr(test, derive(PartialEq))]
 #[derive(Clone, Debug)]
 pub struct WhitelistItem {
     // last 10 bytes of the address

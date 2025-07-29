@@ -6,11 +6,14 @@ use crate::{
         settlement_post_interaction::SettlementPostInteractionData,
     },
     limit::{
-        extension::{Extension, ExtensionBuildable, ExtensionBuilder},
+        extension::Extension,
+        extension_builder::{ExtensionBuildable, ExtensionBuilder},
         interaction::Interaction,
     },
+    utils::bytes_iter::BytesIter,
 };
 
+#[cfg_attr(test, derive(Default, PartialEq))]
 #[derive(Clone, Debug)]
 pub struct FusionExtension {
     pub settlement_extension_contract: Address,
@@ -28,6 +31,36 @@ impl FusionExtension {
     ) -> Self {
         Self {
             settlement_extension_contract,
+            auction_details,
+            post_interaction_data,
+            maker_permit,
+        }
+    }
+
+    pub fn from_extension(extension: Extension) -> Self {
+        let settlement_contract_1 = BytesIter::first_address(extension.making_amount_data.clone());
+        let settlement_contract_2 = BytesIter::first_address(extension.taking_amount_data.clone());
+        let settlement_extension_3 = BytesIter::first_address(extension.post_interaction.clone());
+
+        assert!(
+            settlement_contract_1 == settlement_contract_2
+                && settlement_contract_1 == settlement_extension_3,
+            "Invalid extension, all calls should be to the same address"
+        );
+
+        // TODO this uses making_amount_data only. There seems to be no place that uses taking_amount_data
+        let auction_details = AuctionDetails::from_extension(&extension);
+
+        let post_interaction_data = SettlementPostInteractionData::from_extension(&extension);
+
+        let maker_permit = if extension.maker_permit.is_empty() {
+            None
+        } else {
+            Some(Interaction::decode_from(extension.maker_permit))
+        };
+
+        Self {
+            settlement_extension_contract: settlement_contract_1,
             auction_details,
             post_interaction_data,
             maker_permit,

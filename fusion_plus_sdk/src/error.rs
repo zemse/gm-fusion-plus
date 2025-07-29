@@ -1,11 +1,20 @@
+use std::fmt::Display;
+
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug)]
 pub enum Error {
     InternalError(String),
     InternalErrorStr(&'static str),
+    UnsupportedChainId(u32),
     Reqwest(Box<reqwest::Error>),
     SerdePathToError(Box<serde_path_to_error::Error<serde_json::Error>>),
+}
+
+impl Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{self:?}")
+    }
 }
 
 impl From<String> for Error {

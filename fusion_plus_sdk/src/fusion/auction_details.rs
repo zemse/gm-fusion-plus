@@ -6,7 +6,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     constants::{UINT_24_MAX, UINT_32_MAX},
+    limit::extension::Extension,
     quote::GasCostConfig,
+    utils::bytes_iter::{BytesIter, Side},
 };
 
 pub struct AuctionWhitelistItem {
@@ -15,6 +17,7 @@ pub struct AuctionWhitelistItem {
     pub allow_from: u64,
 }
 
+#[cfg_attr(test, derive(Default, PartialEq))]
 #[derive(Clone, Debug)]
 pub struct AuctionDetails {
     pub start_time: u64,
@@ -44,11 +47,46 @@ impl AuctionDetails {
 
             result.extend(point_encoded);
         }
-
         result.into()
+    }
+
+    pub fn decode_from(bytes: Bytes) -> Self {
+        let mut iter = BytesIter::new(bytes);
+
+        let gas_bump_estimate = iter.next_uint24(Side::Front).to::<u64>();
+        let gas_price_estimate = iter.next_uint32(Side::Front).to::<u64>();
+        let start_time = iter.next_uint32(Side::Front).to::<u64>();
+        let duration = iter.next_uint24(Side::Front).to::<u64>();
+        let initial_rate_bump = iter.next_uint24(Side::Front).to::<u64>();
+
+        let mut points = vec![];
+        while !iter.is_empty() {
+            let coefficient = iter.next_uint24(Side::Front).to::<usize>();
+            let delay = iter.next_uint16(Side::Front).to::<u64>();
+
+            points.push(AuctionPoint { coefficient, delay });
+        }
+
+        AuctionDetails::new(
+            start_time,
+            duration,
+            initial_rate_bump,
+            points,
+            GasCostConfig {
+                gas_bump_estimate,
+                gas_price_estimate: U256::from(gas_price_estimate),
+            },
+        )
+    }
+
+    pub fn from_extension(extension: &Extension) -> Self {
+        let mut iter = BytesIter::new(extension.making_amount_data.clone());
+        let _ = iter.next_address(Side::Front);
+        Self::decode_from(iter.rest())
     }
 }
 
+#[cfg_attr(test, derive(PartialEq))]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AuctionPoint {
@@ -68,7 +106,7 @@ impl AuctionDetails {
         assert!(duration <= UINT_24_MAX);
         assert!(initial_rate_bump <= UINT_24_MAX);
         assert!(gas_cost.gas_bump_estimate <= UINT_24_MAX);
-        assert!(gas_cost.gas_price_estimate <= U256::from(UINT_32_MAX));
+        assert!(gas_cost.gas_price_estimate.to::<u64>() <= UINT_32_MAX);
 
         Self {
             start_time,
@@ -77,5 +115,42 @@ impl AuctionDetails {
             points,
             gas_cost,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_auction_details_encode_decode() {
+        let details = AuctionDetails::new(
+            1753727976,
+            3600,
+            1000,
+            vec![
+                AuctionPoint {
+                    delay: 0,
+                    coefficient: 100,
+                },
+                AuctionPoint {
+                    delay: 600,
+                    coefficient: 200,
+                },
+                AuctionPoint {
+                    delay: 1200,
+                    coefficient: 300,
+                },
+            ],
+            GasCostConfig {
+                gas_bump_estimate: 500000,
+                gas_price_estimate: U256::from(20000000),
+            },
+        );
+
+        let encoded = details.encode();
+        let decoded = AuctionDetails::decode_from(encoded.clone());
+
+        assert_eq!(details, decoded);
     }
 }

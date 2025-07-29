@@ -5,7 +5,8 @@ use alloy::{
 use fusion_plus_sdk::{
     api::Api,
     chain_id::ChainId,
-    cross_chain_order::{CrossChainOrderParams, PreparedOrder},
+    cross_chain_order::{CrossChainOrderParams, Fee, PreparedOrder},
+    escrow_extension::EscrowExtension,
     hash_lock::HashLock,
     quote::QuoteRequest,
     relayer_request::RelayerRequest,
@@ -28,14 +29,14 @@ pub async fn main() -> fusion_plus_sdk::Result<()> {
         ChainId::Arbitrum,
         address!("0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"), // USDC mainnet
         address!("0xaf88d065e77c8cC2239327C5EDb3A432268e5831"), // USDC arbitrum
-        U256::from(100e6),
+        U256::from_str_radix("100000000", 10).unwrap(),
         true,
         wallet.address(),
     );
-    // println!("Quote Request: {quote_request:#?}");
+    println!("Quote Request: {quote_request:#?}");
 
     let quote_result = api.get_quote(&quote_request).await?;
-    // println!("Quote Result: {quote_result:#?}");
+    println!("Quote Result: {quote_result:#?}");
 
     let secrets_count = quote_result.recommended_preset().secrets_count;
     let secrets: Vec<B256> = (0..secrets_count).map(|_| get_random_bytes32()).collect();
@@ -67,6 +68,10 @@ pub async fn main() -> fusion_plus_sdk::Result<()> {
             dst_address: Address::ZERO,
             hash_lock,
             secret_hashes: secret_hashes.clone(),
+            fee: Some(Fee {
+                taking_fee_bps: 100,
+                taking_fee_receiver: Address::ZERO,
+            }),
         },
     )
     .unwrap();
@@ -85,7 +90,10 @@ pub async fn main() -> fusion_plus_sdk::Result<()> {
         Some(secret_hashes),
     );
 
+    let decoded = EscrowExtension::decode_from(rr.extension.clone());
+
     println!("Relayer Request: {rr:#?}");
+    println!("Decoded Escrow Extension: {decoded:#?}");
     let result = api.submit_order(rr).await;
     println!("submit_order result: {result:?}");
 

@@ -7,7 +7,7 @@ use serde::Serialize;
 use crate::{
     chain_id::ChainId,
     cross_chain_order::PreparedOrder,
-    limit::{eip712::LimitOrderV4, extension::ExtensionBuildable},
+    limit::{eip712::LimitOrderV4, extension_builder::ExtensionBuildable},
 };
 
 #[derive(Debug, Clone, Serialize)]

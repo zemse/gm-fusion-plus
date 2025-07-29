@@ -1,7 +1,6 @@
 use alloy::primitives::{Address, B256, Bytes};
 use chrono::Utc;
 use rand::Rng;
-use serde::Serialize;
 
 use crate::{
     chain_id::ChainId,
@@ -48,7 +47,7 @@ impl PreparedOrder {
                 nonce: None, // Some(0),
                 permit: None,
                 is_permit_2: false,
-                taking_fee_receiver: None,
+                taking_fee_receiver: order_params.fee.as_ref().map(|fee| fee.taking_fee_receiver),
                 delay_auction_start_time_by: None,
                 order_expiration_delay: None,
             },
@@ -73,17 +72,15 @@ impl PreparedOrder {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug)]
 pub struct CrossChainOrderParams {
-    #[serde(rename = "walletAddress")]
     pub dst_address: Address,
-
-    #[serde(rename = "hashLock")]
     pub hash_lock: HashLock,
-
     pub secret_hashes: Vec<B256>,
+    pub fee: Option<Fee>,
 }
 
+#[derive(Debug)]
 pub struct Fee {
     pub taking_fee_bps: u16,
     pub taking_fee_receiver: Address,

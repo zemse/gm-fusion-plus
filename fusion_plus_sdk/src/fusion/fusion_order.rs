@@ -8,7 +8,7 @@ use crate::{
         source_track::inject_track_code,
     },
     limit::{
-        extension::ExtensionBuildable, interaction::Interaction, limit_order::LimitOrder,
+        extension_builder::ExtensionBuildable, interaction::Interaction, limit_order::LimitOrder,
         maker_traits::MakerTraits, order_info::OrderInfoData,
     },
     utils::bps::Bps,
@@ -26,6 +26,7 @@ pub struct ResolverFee {
     fee: Bps,
 }
 
+#[cfg_attr(test, derive(PartialEq))]
 #[derive(Clone, Debug)]
 pub struct IntegratorFee {
     pub receiver: Address,

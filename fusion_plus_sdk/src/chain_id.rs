@@ -11,12 +11,16 @@ pub enum ChainId {
 }
 
 impl ChainId {
-    pub fn from_u32(n: u32) -> Option<Self> {
+    pub fn try_from_u32(n: u32) -> crate::Result<Self> {
         match n {
-            1 => Some(ChainId::Ethereum),
-            42161 => Some(ChainId::Arbitrum),
-            _ => None,
+            1 => Ok(ChainId::Ethereum),
+            42161 => Ok(ChainId::Arbitrum),
+            _ => Err(crate::Error::UnsupportedChainId(n)),
         }
+    }
+
+    pub fn from_u32(n: u32) -> Self {
+        ChainId::try_from_u32(n).unwrap()
     }
 }
 
@@ -41,8 +45,7 @@ impl<'de> Deserialize<'de> for ChainId {
         D: Deserializer<'de>,
     {
         let v = u32::deserialize(deserializer)?;
-        ChainId::from_u32(v).ok_or_else(|| {
-            D::Error::invalid_value(Unexpected::Unsigned(v as u64), &"valid ChainId")
-        })
+        ChainId::try_from_u32(v)
+            .map_err(|e| D::Error::invalid_value(Unexpected::Str(&e.to_string()), &"valid ChainId"))
     }
 }

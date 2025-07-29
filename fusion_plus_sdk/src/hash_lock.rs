@@ -5,6 +5,7 @@ use alloy::{
 use alloy_merkle_tree::standard_binary_tree::StandardMerkleTree;
 use serde::Serialize;
 
+#[cfg_attr(test, derive(PartialEq))]
 #[derive(Clone, Debug)]
 pub struct HashLock {
     hash: B256,
