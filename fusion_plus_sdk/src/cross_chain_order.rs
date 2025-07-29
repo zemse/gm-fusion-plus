@@ -166,7 +166,7 @@ impl CrossChainOrder {
                 maker_asset: quote_request.src_token_address,
                 taker_asset,
                 making_amount: quote_result.src_token_amount,
-                taking_amount: quote_result.dst_token_amount,
+                taking_amount: preset.auction_end_amount,
                 maker: quote_request.maker_address,
                 receiver: params.receiver,
                 salt: None,
