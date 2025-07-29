@@ -15,7 +15,7 @@ use crate::{
 pub struct RelayerRequest {
     pub src_chain_id: ChainId,
     pub order: LimitOrderV4,
-    pub signature: Signature,
+    pub signature: Bytes,
     pub quote_id: String,
     pub extension: Bytes,
     pub secret_hashes: Option<Vec<B256>>,
@@ -28,10 +28,20 @@ impl RelayerRequest {
         quote_id: String,
         secret_hashes: Option<Vec<B256>>,
     ) -> Self {
+        let order = prepared_order.to_v4();
+
+        assert_eq!(
+            signature
+                .recover_address_from_prehash(&order.get_order_hash(prepared_order.src_chain_id))
+                .unwrap(),
+            order.maker,
+            "Signature does not match order maker"
+        );
+
         RelayerRequest {
             src_chain_id: prepared_order.src_chain_id,
-            order: prepared_order.to_v4(),
-            signature,
+            order,
+            signature: signature.as_bytes().into(),
             quote_id,
             extension: prepared_order.order.inner.extension.build().encode(),
             secret_hashes,

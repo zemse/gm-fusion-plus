@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use alloy::{
     dyn_abi::Eip712Domain,
-    primitives::{B256, keccak256},
+    primitives::B256,
     sol,
     sol_types::{SolStruct, eip712_domain},
 };
@@ -17,13 +17,12 @@ pub fn get_limit_order_v4_domain(chain_id: ChainId) -> Eip712Domain {
         version: "6",
         chain_id: chain_id as u64,
         verifying_contract: verifying_contract,
-        salt: keccak256("test"),
     }
 }
 
 sol! {
     #[derive(Debug, serde::Serialize)]
-    struct LimitOrderV4 {
+    struct Order {
         uint256 salt;
         address maker;
         address receiver;
@@ -34,6 +33,8 @@ sol! {
         uint256 makerTraits;
     }
 }
+
+pub type LimitOrderV4 = Order;
 
 impl LimitOrderV4 {
     pub fn get_order_hash(&self, chain_id: ChainId) -> B256 {

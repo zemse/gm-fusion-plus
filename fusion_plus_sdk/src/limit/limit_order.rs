@@ -49,6 +49,18 @@ impl LimitOrder {
             &extension,
         );
 
+        // https://github.com/1inch/limit-order-sdk/blob/e2c4d88ef3a830500dc957604958091039b32b96/src/limit-order/limit-order.ts#L69-L71
+        let receiver = order_info
+            .receiver
+            .map(|receiver| {
+                if receiver == order_info.maker {
+                    Address::ZERO
+                } else {
+                    receiver
+                }
+            })
+            .unwrap_or(Address::ZERO);
+
         if !extension.is_empty() {
             maker_traits = maker_traits.with_extension();
         }
@@ -60,8 +72,7 @@ impl LimitOrder {
             taking_amount: order_info.taking_amount,
             salt,
             maker: order_info.maker,
-            receiver: order_info.receiver.unwrap_or_default(),
-
+            receiver,
             maker_traits,
         }
     }

@@ -6,7 +6,6 @@ use fusion_plus_sdk::{
     api::Api,
     chain_id::ChainId,
     cross_chain_order::{CrossChainOrderParams, Fee, PreparedOrder},
-    escrow_extension::EscrowExtension,
     hash_lock::HashLock,
     quote::QuoteRequest,
     relayer_request::RelayerRequest,
@@ -65,7 +64,7 @@ pub async fn main() -> fusion_plus_sdk::Result<()> {
         &quote_request,
         &quote_result,
         CrossChainOrderParams {
-            dst_address: Address::ZERO,
+            dst_address: wallet.address(),
             hash_lock,
             secret_hashes: secret_hashes.clone(),
             fee: Some(Fee {
@@ -78,22 +77,21 @@ pub async fn main() -> fusion_plus_sdk::Result<()> {
 
     println!("Order created: {order:#?}");
 
-    let signature = wallet
-        .sign_hash(&order.eip712_signing_hash())
-        .await
-        .unwrap();
+    let order_hash = order.eip712_signing_hash();
+    let signature = wallet.sign_hash(&order_hash).await.unwrap();
 
     let rr = RelayerRequest::from_prepared_order(
         &order,
         signature,
         quote_result.quote_id.clone().unwrap(),
-        Some(secret_hashes),
+        if secret_hashes.len() == 1 {
+            None
+        } else {
+            Some(secret_hashes)
+        },
     );
 
-    let decoded = EscrowExtension::decode_from(rr.extension.clone());
-
     println!("Relayer Request: {rr:#?}");
-    println!("Decoded Escrow Extension: {decoded:#?}");
     let result = api.submit_order(rr).await;
     println!("submit_order result: {result:?}");
 
