@@ -3,6 +3,7 @@ use chrono::Utc;
 use rand::Rng;
 
 use crate::{
+    addresses::get_true_erc20_address,
     chain_id::ChainId,
     constants::UINT_40_MAX,
     escrow_extension::{EscrowExtension, EscrowParams},
@@ -225,6 +226,8 @@ impl CrossChainOrder {
             "src and dst chain ids must be different"
         );
 
+        let true_erc20 = get_true_erc20_address(escrow_params.src_chain_id);
+
         let ext = EscrowExtension::new(
             src_escrow_factory,
             details.auction,
@@ -240,7 +243,7 @@ impl CrossChainOrder {
             escrow_params,
         );
 
-        Self::new_from_extension(ext, order_info, extra)
+        Self::new_from_extension(ext, order_info.with_taker_asset(true_erc20), extra)
     }
 
     fn new_from_extension(

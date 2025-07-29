@@ -20,4 +20,9 @@ impl OrderInfoData {
         self.salt = Some(salt);
         self
     }
+
+    pub fn with_taker_asset(mut self, taker_asset: Address) -> Self {
+        self.taker_asset = taker_asset;
+        self
+    }
 }
