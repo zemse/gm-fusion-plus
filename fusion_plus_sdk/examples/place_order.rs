@@ -1,8 +1,9 @@
 use alloy::{
-    primitives::{Address, B256, U64, U256, address, keccak256},
+    primitives::{Address, B256, U64, U256, keccak256},
     signers::{Signer, local::PrivateKeySigner},
 };
 use fusion_plus_sdk::{
+    addresses::usdc,
     api::Api,
     chain_id::ChainId,
     cross_chain_order::{CrossChainOrderParams, Fee, PreparedOrder},
@@ -24,11 +25,11 @@ pub async fn main() -> fusion_plus_sdk::Result<()> {
     let wallet = PrivateKeySigner::random();
 
     let quote_request = QuoteRequest::new(
-        ChainId::Ethereum,
+        ChainId::Optimism,
         ChainId::Arbitrum,
-        address!("0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"), // USDC mainnet
-        address!("0xaf88d065e77c8cC2239327C5EDb3A432268e5831"), // USDC arbitrum
-        U256::from_str_radix("100000000", 10).unwrap(),
+        usdc(ChainId::Optimism),
+        usdc(ChainId::Arbitrum),
+        U256::from(1e6),
         true,
         wallet.address(),
     );

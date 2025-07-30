@@ -7,6 +7,7 @@ use serde::{
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum ChainId {
     Ethereum = 1,
+    Optimism = 10,
     Arbitrum = 42161,
 }
 
