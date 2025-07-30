@@ -20,7 +20,7 @@ pub struct QuoteRequest {
     pub src_token_address: Address,
     pub dst_token_address: Address,
     #[serde(rename = "amount")]
-    pub src_amount: String,
+    pub src_amount: U256,
     pub enable_estimate: bool,
     #[serde(rename = "walletAddress")]
     pub maker_address: Address,
@@ -85,7 +85,7 @@ impl QuoteRequest {
         dst_chain_id: impl Into<ChainId>,
         src_token_address: impl Into<Address>,
         dst_token_address: impl Into<Address>,
-        src_amount: impl ToString,
+        src_amount: impl Into<U256>,
         enable_estimate: bool,
         maker_address: impl Into<Address>,
     ) -> Self {
@@ -94,7 +94,7 @@ impl QuoteRequest {
             dst_chain_id: dst_chain_id.into(),
             src_token_address: src_token_address.into(),
             dst_token_address: dst_token_address.into(),
-            src_amount: src_amount.to_string(),
+            src_amount: src_amount.into(),
             enable_estimate,
             maker_address: maker_address.into(),
             permit: None,

@@ -1,4 +1,5 @@
 use serde::{Serialize, de::DeserializeOwned};
+use serde_json::Value;
 
 use crate::{
     Error,
@@ -28,7 +29,7 @@ impl Api {
         Ok(result)
     }
 
-    pub async fn submit_order(&self, relayer_request: RelayerRequest) -> crate::Result<()> {
+    pub async fn submit_order(&self, relayer_request: RelayerRequest) -> crate::Result<Value> {
         self.perform_post("relayer/v1.0/submit", relayer_request)
             .await
     }

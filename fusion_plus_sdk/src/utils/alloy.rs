@@ -1,4 +1,11 @@
-use alloy::primitives::{B256, Bytes, U256};
+use alloy::{
+    primitives::{B256, Bytes, U256},
+    providers::{Provider, ProviderBuilder},
+    signers::local::PrivateKeySigner,
+    sol,
+};
+
+use crate::chain_id::ChainId;
 
 pub trait CustomAlloy {
     fn to_u256(&self) -> U256;
@@ -39,5 +46,27 @@ impl CustomAlloy for Bytes {
 
     fn to_b256(&self) -> B256 {
         self.to_u256().to_b256()
+    }
+}
+
+pub fn create_provider(chain_id: ChainId, wallet: PrivateKeySigner) -> impl Provider {
+    let var = match chain_id {
+        ChainId::Ethereum => "ETH_RPC_URL",
+        ChainId::Optimism => "OPTIMISM_RPC_URL",
+        ChainId::Arbitrum => "ARBITRUM_RPC_URL",
+    };
+
+    let url = std::env::var(var).unwrap().parse().unwrap();
+
+    ProviderBuilder::new().wallet(wallet).connect_http(url)
+}
+
+sol! {
+     #[sol(rpc)]
+    contract ERC20 {
+        function balanceOf(address owner) view returns (uint256);
+        function allowance(address owner, address spender) view returns (uint256);
+        function transfer(address to, uint256 value) returns (bool);
+        function approve(address spender, uint256 value) returns (bool);
     }
 }
