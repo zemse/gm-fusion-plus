@@ -23,6 +23,24 @@ impl ChainId {
     pub fn from_u32(n: u32) -> Self {
         ChainId::try_from_u32(n).unwrap()
     }
+
+    pub fn from_network_name(name: &str) -> crate::Result<Self> {
+        match name {
+            "ethereum" | "eth" => Ok(ChainId::Ethereum),
+            "optimism" | "op" => Ok(ChainId::Optimism),
+            "arbitrum" | "arb" => Ok(ChainId::Optimism),
+            _ => Err(crate::Error::NetworkNameNotRecognised(name.to_string())),
+        }
+    }
+
+    pub fn to_network_name(&self) -> String {
+        match self {
+            ChainId::Ethereum => "eth",
+            ChainId::Optimism => "op",
+            ChainId::Arbitrum => "arb",
+        }
+        .to_string()
+    }
 }
 
 impl From<ChainId> for u32 {

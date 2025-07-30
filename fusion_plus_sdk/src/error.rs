@@ -7,6 +7,8 @@ pub enum Error {
     InternalError(String),
     InternalErrorStr(&'static str),
     UnsupportedChainId(u32),
+    MultichainAddressDecodeFailed(String),
+    NetworkNameNotRecognised(String),
     Reqwest(Box<reqwest::Error>),
     SerdePathToError(Box<serde_path_to_error::Error<serde_json::Error>>),
 }

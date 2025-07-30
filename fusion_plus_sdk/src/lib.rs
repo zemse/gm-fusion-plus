@@ -10,6 +10,7 @@ pub mod cross_chain_order;
 pub mod fusion;
 pub mod hash_lock;
 pub mod limit;
+pub mod multichain_address;
 pub mod quote;
 pub mod relayer_request;
 pub mod utils;
