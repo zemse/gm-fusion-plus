@@ -4,9 +4,11 @@ use alloy::{
     primitives::Address,
     signers::k256::sha2::{Digest, Sha256},
 };
+use serde::{Deserialize, Serialize};
 
 use crate::chain_id::ChainId;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum MultichainAddress {
     Ethereum {
         raw: Address,
@@ -25,6 +27,22 @@ impl MultichainAddress {
                 chain_id: None,
             },
             _ => self,
+        }
+    }
+
+    pub fn as_raw(&self) -> Address {
+        match self {
+            MultichainAddress::Ethereum { raw, .. } => *raw,
+            MultichainAddress::Tron { raw } => *raw,
+        }
+    }
+}
+
+impl Default for MultichainAddress {
+    fn default() -> Self {
+        MultichainAddress::Ethereum {
+            raw: Address::default(),
+            chain_id: None,
         }
     }
 }
@@ -51,6 +69,33 @@ impl Display for MultichainAddress {
     }
 }
 
+impl Serialize for MultichainAddress {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.to_string())
+    }
+}
+
+impl<'de> Deserialize<'de> for MultichainAddress {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        MultichainAddress::try_from(s).map_err(serde::de::Error::custom)
+    }
+}
+
+impl FromStr for MultichainAddress {
+    type Err = crate::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        MultichainAddress::try_from(s.to_string())
+    }
+}
+
 impl TryFrom<String> for MultichainAddress {
     type Error = crate::Error;
 
@@ -68,18 +113,27 @@ impl TryFrom<String> for MultichainAddress {
             }
         } else if let Some(idx) = value.find(":") {
             if let Some((left, right)) = value.split_at_checked(idx) {
-                if let Ok(chain_id) = ChainId::from_network_name(left) {
-                    if let Ok(address) = Address::from_str(right) {
-                        return Ok(MultichainAddress::Ethereum {
-                            raw: address,
-                            chain_id: Some(chain_id),
-                        });
-                    }
+                let right = &right[1..]; // Skip ':'
+                let chain_id = ChainId::from_network_name(left)?;
+                if let Ok(address) = Address::from_str(right) {
+                    return Ok(MultichainAddress::Ethereum {
+                        raw: address,
+                        chain_id: Some(chain_id),
+                    });
                 }
             }
         }
 
         Err(crate::Error::MultichainAddressDecodeFailed(value))
+    }
+}
+
+impl From<Address> for MultichainAddress {
+    fn from(address: Address) -> Self {
+        MultichainAddress::Ethereum {
+            raw: address,
+            chain_id: None,
+        }
     }
 }
 

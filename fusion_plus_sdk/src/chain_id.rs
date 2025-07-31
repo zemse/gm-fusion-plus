@@ -4,7 +4,7 @@ use serde::{
 };
 
 #[repr(u32)]
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum ChainId {
     Ethereum = 1,
     Optimism = 10,
