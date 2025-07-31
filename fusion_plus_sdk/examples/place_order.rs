@@ -128,5 +128,21 @@ pub async fn main() -> fusion_plus_sdk::Result<()> {
     api.submit_order(rr).await?;
     println!("submit_order success");
 
+    loop {
+        let mut done = false;
+        let read = api.get_ready_to_accept_secret_fills(&order_hash).await?;
+        println!("Number of fills: {}", read.fills.len());
+        for fill in read.fills {
+            println!("Fill {fill:#?}");
+            api.submit_secret(&order_hash, &secrets[fill.idx as usize])
+                .await?;
+            println!("secret submitted");
+            done = true;
+        }
+        if done {
+            break;
+        }
+    }
+
     Ok(())
 }

@@ -23,6 +23,53 @@ pub struct PaginationOutput<Inner> {
     items: Vec<Inner>,
 }
 
+#[derive(Debug)]
+pub struct PaginatedParams<Inner> {
+    page: Option<usize>,
+    limit: Option<usize>,
+    inner: Inner,
+}
+
+impl<Inner> Serialize for PaginatedParams<Inner>
+where
+    Inner: Serialize,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        // Convert inner to serde_json::Value and ensure it's a map
+        let inner_value = serde_json::to_value(&self.inner).map_err(serde::ser::Error::custom)?;
+
+        let inner_map = match inner_value {
+            Value::Object(map) => map,
+            _ => {
+                return Err(serde::ser::Error::custom(
+                    "Expected inner to serialize to a JSON object",
+                ));
+            }
+        };
+
+        let field_count =
+            inner_map.len() + self.page.is_some() as usize + self.limit.is_some() as usize;
+
+        let mut map = serializer.serialize_map(Some(field_count))?;
+
+        if let Some(page) = self.page {
+            map.serialize_entry("page", &page)?;
+        }
+        if let Some(limit) = self.limit {
+            map.serialize_entry("limit", &limit)?;
+        }
+
+        for (k, v) in inner_map {
+            map.serialize_entry(&k, &v)?;
+        }
+
+        map.end()
+    }
+}
+
 #[macro_export]
 macro_rules! impl_paginated {
     ($t:ty) => {
@@ -50,10 +97,6 @@ macro_rules! impl_paginated {
     };
 }
 
-pub trait IsEmpty {
-    fn is_empty(&self) -> bool;
-}
-
 #[serde_with::skip_serializing_none]
 #[derive(Default, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -67,17 +110,6 @@ pub struct OrdersByMakerParams {
     pub timestamp_to: Option<u64>,
 }
 impl_paginated!(OrdersByMakerParams);
-impl IsEmpty for OrdersByMakerParams {
-    fn is_empty(&self) -> bool {
-        self.src_chain.is_none()
-            && self.dst_chain.is_none()
-            && self.src_token.is_none()
-            && self.dst_token.is_none()
-            && self.with_token.is_none()
-            && self.timestamp_from.is_none()
-            && self.timestamp_to.is_none()
-    }
-}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -188,11 +220,6 @@ pub struct ActiveOrdersRequestParams {
     pub dst_chain_id: Option<ChainId>,
 }
 impl_paginated!(ActiveOrdersRequestParams);
-impl IsEmpty for ActiveOrdersRequestParams {
-    fn is_empty(&self) -> bool {
-        self.src_chain_id.is_none() && self.dst_chain_id.is_none()
-    }
-}
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -221,49 +248,97 @@ pub struct FillInfo {
     tx_hash: B256,
 }
 
-#[derive(Debug)]
-pub struct PaginatedParams<Inner> {
-    page: Option<usize>,
-    limit: Option<usize>,
-    inner: Inner,
+#[serde_with::skip_serializing_none]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OrderStatusResponse {
+    pub status: OrderStatus,
+    pub order: LimitOrderV4,
+    pub extension: String,
+    pub points: Option<Vec<AuctionPoint>>,
+    pub cancel_tx: Option<String>,
+    pub fills: Vec<Fill>,
+    pub created_at: u64,
+    pub auction_start_date: u64,
+    pub auction_duration: u64,
+    pub initial_rate_bump: u64,
+    #[serde(default)]
+    pub is_native_currency: bool,
+    pub from_token_to_usd_price: Option<String>,
+    pub to_token_to_usd_price: Option<String>,
 }
 
-impl<Inner> Serialize for PaginatedParams<Inner>
-where
-    Inner: Serialize,
-{
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        // Convert inner to serde_json::Value and ensure it's a map
-        let inner_value = serde_json::to_value(&self.inner).map_err(serde::ser::Error::custom)?;
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChainImmutables {
+    pub order_hash: String,
+    pub hashlock: String,
+    pub maker: String,
+    pub taker: String,
+    pub token: String,
+    pub amount: String,
+    pub safety_deposit: String,
+    pub timelocks: String,
+}
 
-        let inner_map = match inner_value {
-            Value::Object(map) => map,
-            _ => {
-                return Err(serde::ser::Error::custom(
-                    "Expected inner to serialize to a JSON object",
-                ));
-            }
-        };
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PublicSecret {
+    pub idx: u32,
+    pub secret: String,
+    pub src_immutables: ChainImmutables,
+    pub dst_immutables: ChainImmutables,
+}
 
-        let field_count =
-            inner_map.len() + self.page.is_some() as usize + self.limit.is_some() as usize;
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PublishedSecretsResponse {
+    pub order_type: OrderType,
+    pub secrets: Vec<PublicSecret>,
 
-        let mut map = serializer.serialize_map(Some(field_count))?;
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub secret_hashes: Option<Vec<String>>,
+}
 
-        if let Some(page) = self.page {
-            map.serialize_entry("page", &page)?;
-        }
-        if let Some(limit) = self.limit {
-            map.serialize_entry("limit", &limit)?;
-        }
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub enum OrderType {
+    SingleFill,
+    MultipleFills,
+}
 
-        for (k, v) in inner_map {
-            map.serialize_entry(&k, &v)?;
-        }
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReadyToAcceptSecretFill {
+    pub idx: u64,
+    pub src_escrow_deploy_tx_hash: String,
+    pub dst_escrow_deploy_tx_hash: String,
+}
 
-        map.end()
-    }
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ReadyToAcceptSecretFills {
+    pub fills: Vec<ReadyToAcceptSecretFill>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum PublicAction {
+    Withdraw,
+    Cancel,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReadyToExecutePublicAction {
+    pub action: PublicAction,
+    pub immutables: ChainImmutables,
+    pub chain_id: ChainId,
+    pub escrow: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub secret: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ReadyToExecutePublicActions {
+    pub actions: Vec<ReadyToExecutePublicAction>,
 }

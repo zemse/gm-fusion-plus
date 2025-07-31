@@ -2,14 +2,16 @@ pub mod types;
 
 use std::str::FromStr;
 
+use alloy::primitives::B256;
 use serde::{Serialize, de::DeserializeOwned};
 use serde_json::{Value, json};
 
 use crate::{
     Error,
     api::types::{
-        ActiveOrder, ActiveOrdersRequestParams, IsEmpty, OrderFillsByMakerOutput,
-        OrdersByMakerParams, PaginatedParams, PaginationOutput,
+        ActiveOrder, ActiveOrdersRequestParams, OrderFillsByMakerOutput, OrderStatusResponse,
+        OrdersByMakerParams, PaginatedParams, PaginationOutput, PublishedSecretsResponse,
+        ReadyToAcceptSecretFills, ReadyToExecutePublicActions,
     },
     chain_id::ChainId,
     multichain_address::MultichainAddress,
@@ -51,6 +53,14 @@ impl Api {
         self.perform_get("orders/v1.0/order/active", request).await
     }
 
+    pub async fn get_order_status(&self, order_hash: B256) -> crate::Result<OrderStatusResponse> {
+        self.perform_get(
+            format!("orders/v1.0/order/status/{order_hash:?}").as_str(),
+            Value::Null,
+        )
+        .await
+    }
+
     pub async fn get_orders_by_maker(
         &self,
         maker: MultichainAddress,
@@ -85,6 +95,49 @@ impl Api {
             ))?;
 
         MultichainAddress::from_str(address)
+    }
+
+    pub async fn get_ready_to_accept_secret_fills(
+        &self,
+        order_hash: &B256,
+    ) -> crate::Result<ReadyToAcceptSecretFills> {
+        self.perform_get(
+            format!("orders/v1.0/order/ready-to-accept-secret-fills/{order_hash:?}").as_str(),
+            Value::Null,
+        )
+        .await
+    }
+
+    pub async fn get_published_secrets(
+        &self,
+        order_hash: &B256,
+    ) -> crate::Result<PublishedSecretsResponse> {
+        self.perform_get(
+            format!("orders/v1.0/order/secrets/{order_hash:?}").as_str(),
+            Value::Null,
+        )
+        .await
+    }
+
+    pub async fn get_ready_to_execute_public_actions(
+        &self,
+    ) -> crate::Result<ReadyToExecutePublicActions> {
+        self.perform_get(
+            "orders/v1.0/order/ready-to-execute-public-actions",
+            Value::Null,
+        )
+        .await
+    }
+
+    pub async fn submit_secret(&self, order_hash: &B256, secret: &B256) -> crate::Result<()> {
+        self.perform_post(
+            "relayer/v1.0/submit/secret",
+            json!({
+                "secret": secret,
+                "orderHash": order_hash,
+            }),
+        )
+        .await
     }
 
     async fn perform_get<Q, R>(&self, route: &str, params: Q) -> crate::Result<R>
@@ -152,6 +205,21 @@ mod tests {
             address.to_string(),
             "0xa7bCb4EAc8964306F9e3764f67Db6A7af6DdF99A"
         );
+    }
+
+    #[tokio::test]
+    pub async fn test_get_order_status() {
+        let api = api_sdk();
+        let address = api
+            .get_order_status(
+                "0x70f58588d42cd073d1293c73b8456d38abf0f0a8c1633ad32b568207176aba60"
+                    .parse()
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        println!("Order Status: {address:#?}");
     }
 
     fn api_sdk() -> super::Api {
