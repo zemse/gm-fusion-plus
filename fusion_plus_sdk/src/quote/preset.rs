@@ -52,3 +52,20 @@ impl Preset {
             + self.start_auction_in
     }
 }
+
+#[serde_with::skip_serializing_none]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CustomPreset {
+    pub auction_duration: u64,
+    pub auction_start_amount: U256,
+    pub auction_end_amount: U256,
+    pub points: Option<Vec<CustomPresetPoint>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CustomPresetPoint {
+    pub to_token_amount: U256,
+    pub delay: u64,
+}

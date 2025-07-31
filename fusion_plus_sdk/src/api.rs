@@ -15,7 +15,7 @@ use crate::{
     },
     chain_id::ChainId,
     multichain_address::MultichainAddress,
-    quote::{QuoteRequest, QuoteResult},
+    quote::{QuoteRequest, QuoteResult, preset::CustomPreset},
     relayer_request::RelayerRequest,
     utils::serde_response_custom_parser::SerdeResponseParse,
 };
@@ -41,8 +41,21 @@ impl Api {
         Ok(result)
     }
 
+    pub async fn get_custom_quote(
+        &self,
+        params: &QuoteRequest,
+        custom_quote: CustomPreset,
+    ) -> crate::Result<QuoteResult> {
+        println!("Custom Quote: {:?}", serde_json::to_value(&custom_quote));
+        let result = self
+            .perform_post("quoter/v1.0/quote/receive", params, custom_quote)
+            .await?;
+
+        Ok(result)
+    }
+
     pub async fn submit_order(&self, relayer_request: RelayerRequest) -> crate::Result<()> {
-        self.perform_post("relayer/v1.0/submit", relayer_request)
+        self.perform_post("relayer/v1.0/submit", Value::Null, relayer_request)
             .await
     }
 
@@ -132,6 +145,7 @@ impl Api {
     pub async fn submit_secret(&self, order_hash: &B256, secret: &B256) -> crate::Result<()> {
         self.perform_post(
             "relayer/v1.0/submit/secret",
+            Value::Null,
             json!({
                 "secret": secret,
                 "orderHash": order_hash,
@@ -162,8 +176,9 @@ impl Api {
         }
     }
 
-    async fn perform_post<B, R>(&self, route: &str, body: B) -> crate::Result<R>
+    async fn perform_post<Q, B, R>(&self, route: &str, params: Q, body: B) -> crate::Result<R>
     where
+        Q: Serialize,
         B: Serialize,
         R: DeserializeOwned,
     {
@@ -172,6 +187,7 @@ impl Api {
         let result = client
             .post(url)
             .bearer_auth(&self.api_key)
+            .query(&params)
             .json(&body)
             .send()
             .await?;
@@ -212,7 +228,7 @@ mod tests {
         let api = api_sdk();
         let address = api
             .get_order_status(
-                "0x70f58588d42cd073d1293c73b8456d38abf0f0a8c1633ad32b568207176aba60"
+                "0x72ab3557a5f451e7762603921be3239af7110a9b054bcfbd4de7c89a2fdf60c9"
                     .parse()
                     .unwrap(),
             )

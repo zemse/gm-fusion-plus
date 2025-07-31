@@ -10,7 +10,10 @@ use fusion_plus_sdk::{
     chain_id::ChainId,
     cross_chain_order::{CrossChainOrderParams, Fee, PreparedOrder},
     hash_lock::HashLock,
-    quote::QuoteRequest,
+    quote::{
+        QuoteRequest,
+        preset::{CustomPreset, CustomPresetPoint, PresetType},
+    },
     relayer_request::RelayerRequest,
     utils::{
         alloy::{ERC20, create_provider},
@@ -43,7 +46,30 @@ pub async fn main() -> fusion_plus_sdk::Result<()> {
     );
     println!("Quote Request: {quote_request:#?}");
 
-    let quote_result = api.get_quote(&quote_request).await?;
+    let quote_result = api
+        .get_custom_quote(
+            &quote_request,
+            CustomPreset {
+                auction_duration: 600,
+                auction_start_amount: U256::from(2e6),
+                auction_end_amount: U256::from(6e5),
+                points: Some(vec![
+                    CustomPresetPoint {
+                        to_token_amount: U256::from(15e5),
+                        delay: 30,
+                    },
+                    CustomPresetPoint {
+                        to_token_amount: U256::from(12e5),
+                        delay: 60,
+                    },
+                    CustomPresetPoint {
+                        to_token_amount: U256::from(7e5),
+                        delay: 90,
+                    },
+                ]),
+            },
+        )
+        .await?;
     println!("Quote Result: {quote_result:#?}");
 
     let arb = create_provider(ChainId::Arbitrum, wallet.clone());
@@ -104,7 +130,7 @@ pub async fn main() -> fusion_plus_sdk::Result<()> {
                 taking_fee_bps: 100,
                 taking_fee_receiver: Address::ZERO,
             }),
-            preset: None,
+            preset: Some(PresetType::Custom),
         },
     )
     .unwrap();

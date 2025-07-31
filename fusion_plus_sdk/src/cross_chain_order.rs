@@ -43,7 +43,7 @@ impl PreparedOrder {
             quote_result,
             CrossChainOrderParamsData {
                 hash_lock: order_params.hash_lock,
-                preset: None, // PresetType::Fast,
+                preset: order_params.preset,
                 receiver: Some(order_params.dst_address),
                 nonce: None, // Some(0),
                 permit: None,
@@ -79,6 +79,7 @@ pub struct CrossChainOrderParams {
     pub hash_lock: HashLock,
     pub secret_hashes: Vec<B256>,
     pub fee: Option<Fee>,
+    pub preset: Option<PresetType>,
 }
 
 #[derive(Debug)]
