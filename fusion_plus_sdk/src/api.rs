@@ -1,10 +1,18 @@
 pub mod types;
 
+use std::str::FromStr;
+
 use serde::{Serialize, de::DeserializeOwned};
+use serde_json::{Value, json};
 
 use crate::{
     Error,
-    api::types::{ActiveOrder, ActiveOrdersRequestParams, PaginatedParams, PaginationOutput},
+    api::types::{
+        ActiveOrder, ActiveOrdersRequestParams, IsEmpty, OrderFillsByMakerOutput,
+        OrdersByMakerParams, PaginatedParams, PaginationOutput,
+    },
+    chain_id::ChainId,
+    multichain_address::MultichainAddress,
     quote::{QuoteRequest, QuoteResult},
     relayer_request::RelayerRequest,
     utils::serde_response_custom_parser::SerdeResponseParse,
@@ -41,6 +49,42 @@ impl Api {
         request: PaginatedParams<ActiveOrdersRequestParams>,
     ) -> crate::Result<PaginationOutput<ActiveOrder>> {
         self.perform_get("orders/v1.0/order/active", request).await
+    }
+
+    pub async fn get_orders_by_maker(
+        &self,
+        maker: MultichainAddress,
+        params: PaginatedParams<OrdersByMakerParams>,
+    ) -> crate::Result<PaginationOutput<OrderFillsByMakerOutput>> {
+        self.perform_get(
+            format!("orders/v1.0/order/maker/{}", maker.without_chain_id()).as_str(),
+            params,
+        )
+        .await
+    }
+
+    pub async fn get_escrow_factory_contract_address(
+        &self,
+        chain_id: ChainId,
+    ) -> crate::Result<MultichainAddress> {
+        let value: Value = self
+            .perform_get(
+                "orders/v1.0/order/escrow",
+                json!({
+                    "chainId": chain_id
+                }),
+            )
+            .await?;
+
+        let address = value
+            .as_object()
+            .and_then(|obj| obj.get("address"))
+            .and_then(|value| value.as_str())
+            .ok_or(crate::Error::InternalErrorStr(
+                "expected address field in response",
+            ))?;
+
+        MultichainAddress::from_str(address)
     }
 
     async fn perform_get<Q, R>(&self, route: &str, params: Q) -> crate::Result<R>
@@ -90,5 +134,32 @@ impl Api {
             let error_text = result.text().await?;
             Err(Error::InternalError(error_text))
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::chain_id::ChainId;
+
+    #[tokio::test]
+    pub async fn test_get_escrow_factory_contract_address() {
+        let api = api_sdk();
+        let address = api
+            .get_escrow_factory_contract_address(ChainId::Arbitrum)
+            .await
+            .unwrap();
+        assert_eq!(
+            address.to_string(),
+            "0xa7bCb4EAc8964306F9e3764f67Db6A7af6DdF99A"
+        );
+    }
+
+    fn api_sdk() -> super::Api {
+        dotenvy::from_path("../.env").unwrap();
+
+        super::Api::new(
+            "https://api.1inch.dev/fusion-plus",
+            std::env::var("ONEINCH_API_KEY").expect("ONEINCH_API_KEY not set in .env file"),
+        )
     }
 }

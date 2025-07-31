@@ -88,7 +88,6 @@ impl AuctionDetails {
 
 #[cfg_attr(test, derive(PartialEq))]
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct AuctionPoint {
     pub delay: u64,
     pub coefficient: usize,
