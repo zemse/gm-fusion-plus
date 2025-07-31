@@ -1,0 +1,3 @@
+[submodule "gm-tui"]
+	path = gm-tui
+	url = git@github.com:zemse/gm.git
