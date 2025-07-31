@@ -1,8 +1,10 @@
+pub mod types;
+
 use serde::{Serialize, de::DeserializeOwned};
-use serde_json::Value;
 
 use crate::{
     Error,
+    api::types::{ActiveOrder, ActiveOrdersRequestParams, PaginatedParams, PaginationOutput},
     quote::{QuoteRequest, QuoteResult},
     relayer_request::RelayerRequest,
     utils::serde_response_custom_parser::SerdeResponseParse,
@@ -29,9 +31,16 @@ impl Api {
         Ok(result)
     }
 
-    pub async fn submit_order(&self, relayer_request: RelayerRequest) -> crate::Result<Value> {
+    pub async fn submit_order(&self, relayer_request: RelayerRequest) -> crate::Result<()> {
         self.perform_post("relayer/v1.0/submit", relayer_request)
             .await
+    }
+
+    pub async fn get_active_orders(
+        &self,
+        request: PaginatedParams<ActiveOrdersRequestParams>,
+    ) -> crate::Result<PaginationOutput<ActiveOrder>> {
+        self.perform_get("orders/v1.0/order/active", request).await
     }
 
     async fn perform_get<Q, R>(&self, route: &str, params: Q) -> crate::Result<R>
@@ -70,8 +79,13 @@ impl Api {
             .send()
             .await?;
         if result.status().is_success() {
-            let response: R = result.serde_parse_custom().await?;
-            Ok(response)
+            if result.content_length() == Some(0) {
+                let unit: R = serde_json::from_str("null").unwrap();
+                Ok(unit)
+            } else {
+                let response: R = result.serde_parse_custom().await?;
+                Ok(response)
+            }
         } else {
             let error_text = result.text().await?;
             Err(Error::InternalError(error_text))

@@ -1,10 +1,11 @@
+use num_enum::TryFromPrimitive;
 use serde::{
     Deserialize, Deserializer, Serialize, Serializer,
     de::{Error, Unexpected},
 };
 
 #[repr(u32)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, TryFromPrimitive)]
 pub enum ChainId {
     Ethereum = 1,
     Optimism = 10,
@@ -12,16 +13,8 @@ pub enum ChainId {
 }
 
 impl ChainId {
-    pub fn try_from_u32(n: u32) -> crate::Result<Self> {
-        match n {
-            1 => Ok(ChainId::Ethereum),
-            42161 => Ok(ChainId::Arbitrum),
-            _ => Err(crate::Error::UnsupportedChainId(n)),
-        }
-    }
-
     pub fn from_u32(n: u32) -> Self {
-        ChainId::try_from_u32(n).unwrap()
+        ChainId::try_from_primitive(n).unwrap()
     }
 
     pub fn from_network_name(name: &str) -> crate::Result<Self> {
@@ -64,7 +57,7 @@ impl<'de> Deserialize<'de> for ChainId {
         D: Deserializer<'de>,
     {
         let v = u32::deserialize(deserializer)?;
-        ChainId::try_from_u32(v)
+        ChainId::try_from_primitive(v)
             .map_err(|e| D::Error::invalid_value(Unexpected::Str(&e.to_string()), &"valid ChainId"))
     }
 }

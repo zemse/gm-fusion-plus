@@ -6,6 +6,7 @@ use alloy::{
     sol,
     sol_types::{SolStruct, eip712_domain},
 };
+use serde::{Deserialize, Serialize};
 
 use crate::{addresses::get_limit_order_contract_address, chain_id::ChainId};
 
@@ -21,7 +22,7 @@ pub fn get_limit_order_v4_domain(chain_id: ChainId) -> Eip712Domain {
 }
 
 sol! {
-    #[derive(Debug, serde::Serialize)]
+    #[derive(Debug, Serialize, Deserialize)]
     struct Order {
         uint256 salt;
         address maker;

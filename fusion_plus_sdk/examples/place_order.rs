@@ -125,8 +125,8 @@ pub async fn main() -> fusion_plus_sdk::Result<()> {
     );
 
     println!("Relayer Request: {rr:#?}");
-    let result = api.submit_order(rr).await;
-    println!("submit_order result: {result:?}");
+    api.submit_order(rr).await?;
+    println!("submit_order success");
 
     Ok(())
 }
