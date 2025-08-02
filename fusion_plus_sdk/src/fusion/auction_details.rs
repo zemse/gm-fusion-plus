@@ -61,7 +61,7 @@ impl AuctionDetails {
 
         let mut points = vec![];
         while !iter.is_empty() {
-            let coefficient = iter.next_uint24(Side::Front).to::<usize>();
+            let coefficient = iter.next_uint24(Side::Front).to::<u64>();
             let delay = iter.next_uint16(Side::Front).to::<u64>();
 
             points.push(AuctionPoint { coefficient, delay });
@@ -90,7 +90,7 @@ impl AuctionDetails {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AuctionPoint {
     pub delay: u64,
-    pub coefficient: usize,
+    pub coefficient: u64,
 }
 
 impl AuctionDetails {

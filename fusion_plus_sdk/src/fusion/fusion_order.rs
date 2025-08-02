@@ -30,7 +30,7 @@ pub struct ResolverFee {
 #[derive(Clone, Debug)]
 pub struct IntegratorFee {
     pub receiver: Address,
-    pub ratio: u16,
+    pub ratio: u64,
 }
 
 #[derive(Clone, Debug)]

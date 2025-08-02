@@ -4,6 +4,7 @@ pub mod time_locks;
 pub use error::{Error, Result};
 pub mod addresses;
 pub mod api;
+pub mod auction_calculator;
 pub mod chain_id;
 pub mod constants;
 pub mod cross_chain_order;

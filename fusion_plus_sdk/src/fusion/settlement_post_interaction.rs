@@ -88,7 +88,7 @@ impl SettlementPostInteractionData {
         if let Some(integrator_fee) = &self.integrator_fee {
             if integrator_fee.ratio > 0 {
                 flags.set_bit(1, true);
-                bytes.push_uint16(integrator_fee.ratio);
+                bytes.push_uint16(integrator_fee.ratio as u16);
                 bytes.push_address(integrator_fee.receiver);
 
                 if let Some(custom_receiver) = self.custom_receiver {
@@ -125,7 +125,7 @@ impl SettlementPostInteractionData {
         }
 
         if flags.bit(1) {
-            let ratio = iter.next_uint16(Side::Front).to::<u16>();
+            let ratio = iter.next_uint16(Side::Front).to::<u64>();
             let receiver = iter.next_address(Side::Front);
             integrator_fee = Some(IntegratorFee { ratio, receiver });
 

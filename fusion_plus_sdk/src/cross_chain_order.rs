@@ -186,7 +186,7 @@ impl CrossChainOrder {
                 fees: Some(DetailsFees {
                     integrator_fee: IntegratorFee {
                         receiver: params.taking_fee_receiver.unwrap_or_default(),
-                        ratio: Bps::to_ratio_format(quote_request.fee) as u16,
+                        ratio: Bps::to_ratio_format(quote_request.fee),
                     },
                     bank_fee: Some(0),
                 }),
