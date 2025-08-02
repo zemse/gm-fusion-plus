@@ -15,17 +15,20 @@ use crate::{
 };
 
 // https://github.com/1inch/fusion-sdk/blob/6d40f680a2f1cd0148c314d4c8608a004fffdc09/src/fusion-order/surplus-params.ts#L5
+#[allow(dead_code)]
 pub struct SurplusParams {
     estimated_taker_amount: U256,
     protocol_fee: Bps,
 }
 
+#[allow(dead_code)]
 #[derive(Clone, Debug)]
 pub struct ResolverFee {
     receiver: Address,
     fee: Bps,
 }
 
+#[allow(dead_code)]
 #[cfg_attr(test, derive(PartialEq))]
 #[derive(Clone, Debug)]
 pub struct IntegratorFee {
@@ -33,6 +36,7 @@ pub struct IntegratorFee {
     pub ratio: u64,
 }
 
+#[allow(dead_code)]
 #[derive(Clone, Debug)]
 pub struct Fees {
     resolver: ResolverFee,

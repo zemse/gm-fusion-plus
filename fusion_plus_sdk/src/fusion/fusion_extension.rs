@@ -91,6 +91,7 @@ impl ExtensionBuildable for FusionExtension {
 
 // TODO seems this is not used anywhere
 // https://github.com/1inch/fusion-sdk/blob/6d40f680a2f1cd0148c314d4c8608a004fffdc09/src/fusion-order/fusion-extension.ts#L19
+#[allow(dead_code)]
 pub struct FusionExtensionExtra {
     maker_permit: Interaction,
     custom_receiver: Option<Address>,

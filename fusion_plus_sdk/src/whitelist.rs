@@ -20,6 +20,7 @@ pub struct WhitelistItemIntermediate {
 
 // https://github.com/1inch/fusion-sdk/blob/6d40f680a2f1cd0148c314d4c8608a004fffdc09/src/fusion-order/whitelist/whitelist.ts#L9
 pub struct Whitelist {
+    #[allow(dead_code)]
     resolving_start_time: u64,
     whitelist: Vec<WhitelistItem>,
 }

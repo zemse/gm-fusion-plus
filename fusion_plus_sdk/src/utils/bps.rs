@@ -1,6 +1,7 @@
 use alloy::primitives::U256;
 
 // https://github.com/1inch/limit-order-sdk/blob/1793d32bd36c6cfea909caafbc15e8023a033249/src/bps.ts#L8
+#[allow(dead_code)]
 #[derive(Clone, Debug)]
 pub struct Bps {
     value: u64, // Basis points
@@ -21,5 +22,5 @@ impl Bps {
 }
 
 pub fn add_ratio_to_amount(amount: U256, ratio: u64) -> U256 {
-    return amount + ((amount * U256::from(ratio)) / U256::from(FEE_BASE));
+    amount + ((amount * U256::from(ratio)) / U256::from(FEE_BASE))
 }
