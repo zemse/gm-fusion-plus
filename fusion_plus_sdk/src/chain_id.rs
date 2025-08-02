@@ -12,7 +12,7 @@ pub enum ChainId {
     Ethereum = 1,
     Optimism = 10,
     Arbitrum = 42161,
-    Tron = 12345, // TODO
+    Tron = 728126428,
 }
 
 impl ChainId {
