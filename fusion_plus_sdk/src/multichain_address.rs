@@ -59,9 +59,13 @@ impl Display for MultichainAddress {
         let str = match self {
             MultichainAddress::Ethereum { raw, chain_id } => {
                 if let Some(chain_id) = chain_id {
-                    format!("{}:{:?}", chain_id.to_network_name(), raw)
+                    format!(
+                        "{}@{}",
+                        raw.to_checksum_buffer(Some(*chain_id as u64)),
+                        chain_id.to_network_name()
+                    )
                 } else {
-                    raw.to_string()
+                    raw.to_checksum(None)
                 }
             }
             MultichainAddress::Tron { raw } => {
@@ -110,11 +114,11 @@ impl FromStr for MultichainAddress {
                     raw: Address::from_slice(&bytes[1..21]),
                 });
             }
-        } else if let Some(idx) = value.find(":") {
+        } else if let Some(idx) = value.find("@") {
             if let Some((left, right)) = value.split_at_checked(idx) {
-                let right = &right[1..]; // Skip ':'
-                let chain_id = ChainId::from_str(left)?;
-                if let Ok(address) = Address::from_str(right) {
+                let right = &right[1..]; // Skip '@'
+                let chain_id = ChainId::from_str(right)?;
+                if let Ok(address) = Address::from_str(left) {
                     return Ok(match chain_id {
                         ChainId::Tron => MultichainAddress::Tron { raw: address },
                         _ => MultichainAddress::Ethereum {
