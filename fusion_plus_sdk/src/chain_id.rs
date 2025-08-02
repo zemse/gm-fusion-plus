@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use num_enum::TryFromPrimitive;
 use serde::{
     Deserialize, Deserializer, Serialize, Serializer,
@@ -10,6 +12,7 @@ pub enum ChainId {
     Ethereum = 1,
     Optimism = 10,
     Arbitrum = 42161,
+    Tron = 12345, // TODO
 }
 
 impl ChainId {
@@ -21,7 +24,8 @@ impl ChainId {
         match name {
             "ethereum" | "eth" => Ok(ChainId::Ethereum),
             "optimism" | "op" => Ok(ChainId::Optimism),
-            "arbitrum" | "arb" => Ok(ChainId::Optimism),
+            "arbitrum" | "arb" => Ok(ChainId::Arbitrum),
+            "tron" => Ok(ChainId::Tron),
             _ => Err(crate::Error::NetworkNameNotRecognised(name.to_string())),
         }
     }
@@ -31,8 +35,24 @@ impl ChainId {
             ChainId::Ethereum => "eth",
             ChainId::Optimism => "op",
             ChainId::Arbitrum => "arb",
+            ChainId::Tron => "tron",
         }
         .to_string()
+    }
+}
+
+impl FromStr for ChainId {
+    type Err = crate::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if let Ok(result) = Self::from_network_name(s) {
+            Ok(result)
+        } else if let Ok(number) = u32::from_str(s) {
+            ChainId::try_from_primitive(number)
+                .map_err(|e| crate::Error::UnsupportedChainIdStr(e.to_string()))
+        } else {
+            Err(crate::Error::UnsupportedChainIdStr(s.to_string()))
+        }
     }
 }
 

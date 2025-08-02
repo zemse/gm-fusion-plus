@@ -7,6 +7,7 @@ pub enum Error {
     InternalError(String),
     InternalErrorStr(&'static str),
     UnsupportedChainId(u32),
+    UnsupportedChainIdStr(String),
     MultichainAddressDecodeFailed(String),
     NetworkNameNotRecognised(String),
     Reqwest(Box<reqwest::Error>),

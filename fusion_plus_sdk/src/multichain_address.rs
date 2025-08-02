@@ -36,6 +36,13 @@ impl MultichainAddress {
             MultichainAddress::Tron { raw } => *raw,
         }
     }
+
+    pub fn get_chain_id(&self) -> Option<ChainId> {
+        match self {
+            MultichainAddress::Ethereum { chain_id, .. } => *chain_id,
+            MultichainAddress::Tron { .. } => Some(ChainId::Tron),
+        }
+    }
 }
 
 impl Default for MultichainAddress {
@@ -84,23 +91,15 @@ impl<'de> Deserialize<'de> for MultichainAddress {
         D: serde::Deserializer<'de>,
     {
         let s = String::deserialize(deserializer)?;
-        MultichainAddress::try_from(s).map_err(serde::de::Error::custom)
+        MultichainAddress::from_str(&s).map_err(serde::de::Error::custom)
     }
 }
 
 impl FromStr for MultichainAddress {
     type Err = crate::Error;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        MultichainAddress::try_from(s.to_string())
-    }
-}
-
-impl TryFrom<String> for MultichainAddress {
-    type Error = crate::Error;
-
-    fn try_from(value: String) -> crate::Result<Self> {
-        if let Ok(eth_address) = Address::from_str(&value) {
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        if let Ok(eth_address) = Address::from_str(value) {
             return Ok(MultichainAddress::Ethereum {
                 raw: eth_address,
                 chain_id: None,
@@ -114,17 +113,22 @@ impl TryFrom<String> for MultichainAddress {
         } else if let Some(idx) = value.find(":") {
             if let Some((left, right)) = value.split_at_checked(idx) {
                 let right = &right[1..]; // Skip ':'
-                let chain_id = ChainId::from_network_name(left)?;
+                let chain_id = ChainId::from_str(left)?;
                 if let Ok(address) = Address::from_str(right) {
-                    return Ok(MultichainAddress::Ethereum {
-                        raw: address,
-                        chain_id: Some(chain_id),
+                    return Ok(match chain_id {
+                        ChainId::Tron => MultichainAddress::Tron { raw: address },
+                        _ => MultichainAddress::Ethereum {
+                            raw: address,
+                            chain_id: Some(chain_id),
+                        },
                     });
                 }
             }
         }
 
-        Err(crate::Error::MultichainAddressDecodeFailed(value))
+        Err(crate::Error::MultichainAddressDecodeFailed(
+            value.to_string(),
+        ))
     }
 }
 
@@ -161,8 +165,7 @@ mod test {
     #[test]
     fn test_try_from_eth() {
         let result =
-            MultichainAddress::try_from("0x5bc44f18b91f55540d11d612c08e4faad619eb55".to_string())
-                .unwrap();
+            MultichainAddress::from_str("0x5bc44f18b91f55540d11d612c08e4faad619eb55").unwrap();
 
         assert_eq!(
             result.to_string(),
@@ -175,8 +178,7 @@ mod test {
 
     #[test]
     fn test_try_from_tron() {
-        let result =
-            MultichainAddress::try_from("TJLRfJUAHPRxoizJeyYFFZ7nEHit4L9FfE".to_string()).unwrap();
+        let result = MultichainAddress::from_str("TJLRfJUAHPRxoizJeyYFFZ7nEHit4L9FfE").unwrap();
 
         assert_eq!(result.to_string(), "TJLRfJUAHPRxoizJeyYFFZ7nEHit4L9FfE");
     }

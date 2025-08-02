@@ -54,6 +54,7 @@ pub fn create_provider(chain_id: ChainId, wallet: PrivateKeySigner) -> impl Prov
         ChainId::Ethereum => "ETH_RPC_URL",
         ChainId::Optimism => "OPTIMISM_RPC_URL",
         ChainId::Arbitrum => "ARBITRUM_RPC_URL",
+        ChainId::Tron => "TRON_RPC_URL",
     };
 
     let url = std::env::var(var).unwrap().parse().unwrap();
