@@ -1,8 +1,9 @@
-use alloy::primitives::{Address, Bytes, U256};
+use alloy::primitives::{Bytes, U256};
 
 use crate::{
     fusion::{auction_details::AuctionWhitelistItem, fusion_order::IntegratorFee},
     limit::extension::Extension,
+    multichain_address::MultichainAddress,
     utils::{
         bit_mask::BitMask,
         bytes_builder::BytesBuilder,
@@ -17,7 +18,7 @@ pub struct SettlementSuffixData {
     pub integrator_fee: Option<IntegratorFee>,
     pub bank_fee: Option<u64>,
     pub resolving_start_time: u64,
-    pub custom_receiver: Option<Address>,
+    pub custom_receiver: Option<MultichainAddress>,
 }
 
 // https://github.com/1inch/fusion-sdk/blob/32733a8b1d77ad6018591aa93eb162c3995ded20/src/fusion-order/settlement-post-interaction-data/settlement-post-interaction-data.ts#L10-L11
@@ -28,7 +29,7 @@ pub struct SettlementPostInteractionData {
     pub integrator_fee: Option<IntegratorFee>,
     pub bank_fee: Option<u64>,
     pub resolving_start_time: u64,
-    pub custom_receiver: Option<Address>,
+    pub custom_receiver: Option<MultichainAddress>,
 }
 
 impl SettlementPostInteractionData {
@@ -40,7 +41,7 @@ impl SettlementPostInteractionData {
             .whitelist
             .iter()
             .map(|d| WhitelistItemIntermediate {
-                address_half: d.address.as_slice()[10..].try_into().unwrap(),
+                address_half: d.address.as_raw().as_slice()[10..].try_into().unwrap(),
                 // note: delay currently stores a timestamp, actual "delay" secs value is calculated later
                 allow_from: if d.allow_from < data.resolving_start_time {
                     data.resolving_start_time
@@ -89,11 +90,11 @@ impl SettlementPostInteractionData {
             if integrator_fee.ratio > 0 {
                 flags.set_bit(1, true);
                 bytes.push_uint16(integrator_fee.ratio as u16);
-                bytes.push_address(integrator_fee.receiver);
+                bytes.push_address(integrator_fee.receiver.as_raw());
 
                 if let Some(custom_receiver) = self.custom_receiver {
                     flags.set_bit(2, true);
-                    bytes.push_address(custom_receiver);
+                    bytes.push_address(custom_receiver.as_raw());
                 }
             }
         }
@@ -126,11 +127,11 @@ impl SettlementPostInteractionData {
 
         if flags.bit(1) {
             let ratio = iter.next_uint16(Side::Front).to::<u64>();
-            let receiver = iter.next_address(Side::Front);
+            let receiver = MultichainAddress::from_raw(iter.next_address(Side::Front));
             integrator_fee = Some(IntegratorFee { ratio, receiver });
 
             if flags.bit(2) {
-                custom_receiver = Some(iter.next_address(Side::Front));
+                custom_receiver = Some(MultichainAddress::from_raw(iter.next_address(Side::Front)));
             }
         }
 

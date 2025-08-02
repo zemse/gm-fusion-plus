@@ -1,18 +1,19 @@
 use alloy::{
     dyn_abi::DynSolValue,
-    primitives::{Address, Bytes, U256},
+    primitives::{Bytes, U256},
 };
 use serde::{Deserialize, Serialize};
 
 use crate::{
     constants::{UINT_24_MAX, UINT_32_MAX},
     limit::extension::Extension,
+    multichain_address::MultichainAddress,
     quote::GasCostConfig,
     utils::bytes_iter::{BytesIter, Side},
 };
 
 pub struct AuctionWhitelistItem {
-    pub address: Address,
+    pub address: MultichainAddress,
     // Timestamp in sec at which address can start resolving
     pub allow_from: u64,
 }

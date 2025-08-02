@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{fmt::Display, str::FromStr};
 
 use num_enum::TryFromPrimitive;
 use serde::{
@@ -13,6 +13,12 @@ pub enum ChainId {
     Optimism = 10,
     Arbitrum = 42161,
     Tron = 728126428,
+}
+
+impl Display for ChainId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.to_network_name())
+    }
 }
 
 impl ChainId {

@@ -1,4 +1,4 @@
-use alloy::primitives::{Address, B256, Bytes, U256};
+use alloy::primitives::{B256, Bytes, U256};
 
 use crate::{
     chain_id::ChainId,
@@ -11,6 +11,7 @@ use crate::{
         extension_builder::ExtensionBuildable, interaction::Interaction, limit_order::LimitOrder,
         maker_traits::MakerTraits, order_info::OrderInfoData,
     },
+    multichain_address::MultichainAddress,
     utils::bps::Bps,
 };
 
@@ -24,7 +25,7 @@ pub struct SurplusParams {
 #[allow(dead_code)]
 #[derive(Clone, Debug)]
 pub struct ResolverFee {
-    receiver: Address,
+    receiver: MultichainAddress,
     fee: Bps,
 }
 
@@ -32,7 +33,7 @@ pub struct ResolverFee {
 #[cfg_attr(test, derive(PartialEq))]
 #[derive(Clone, Debug)]
 pub struct IntegratorFee {
-    pub receiver: Address,
+    pub receiver: MultichainAddress,
     pub ratio: u64,
 }
 
@@ -58,14 +59,14 @@ pub struct FusionOrderExtra {
 
 #[derive(Clone, Debug)]
 pub struct FusionOrder<E: ExtensionBuildable> {
-    pub settlement_extension_contract: Address,
+    pub settlement_extension_contract: MultichainAddress,
     pub extension: E,
     pub inner: LimitOrder,
 }
 
 impl FusionOrder<FusionExtension> {
     pub fn new(
-        settlement_extension_contract: Address,
+        settlement_extension_contract: MultichainAddress,
         order_info: OrderInfoData,
         auction_details: AuctionDetails,
         post_interaction_data: SettlementPostInteractionData,
@@ -96,7 +97,7 @@ impl FusionOrder<FusionExtension> {
 
 impl<E: ExtensionBuildable> FusionOrder<E> {
     pub fn new_with_extension(
-        settlement_extension_contract: Address,
+        settlement_extension_contract: MultichainAddress,
         order_info: OrderInfoData,
         auction_details: AuctionDetails,
         post_interaction_data: SettlementPostInteractionData,

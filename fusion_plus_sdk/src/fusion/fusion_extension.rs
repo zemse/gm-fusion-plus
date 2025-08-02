@@ -1,5 +1,3 @@
-use alloy::primitives::Address;
-
 use crate::{
     fusion::{
         auction_details::AuctionDetails, fusion_order::Fees,
@@ -10,13 +8,14 @@ use crate::{
         extension_builder::{ExtensionBuildable, ExtensionBuilder},
         interaction::Interaction,
     },
+    multichain_address::MultichainAddress,
     utils::bytes_iter::BytesIter,
 };
 
 #[cfg_attr(test, derive(Default, PartialEq))]
 #[derive(Clone, Debug)]
 pub struct FusionExtension {
-    pub settlement_extension_contract: Address,
+    pub settlement_extension_contract: MultichainAddress,
     pub auction_details: AuctionDetails,
     pub post_interaction_data: SettlementPostInteractionData,
     pub maker_permit: Option<Interaction>,
@@ -24,7 +23,7 @@ pub struct FusionExtension {
 
 impl FusionExtension {
     pub fn new(
-        settlement_extension_contract: Address,
+        settlement_extension_contract: MultichainAddress,
         auction_details: AuctionDetails,
         post_interaction_data: SettlementPostInteractionData,
         maker_permit: Option<Interaction>,
@@ -60,7 +59,7 @@ impl FusionExtension {
         };
 
         Self {
-            settlement_extension_contract: settlement_contract_1,
+            settlement_extension_contract: MultichainAddress::from_raw(settlement_contract_1),
             auction_details,
             post_interaction_data,
             maker_permit,
@@ -94,6 +93,6 @@ impl ExtensionBuildable for FusionExtension {
 #[allow(dead_code)]
 pub struct FusionExtensionExtra {
     maker_permit: Interaction,
-    custom_receiver: Option<Address>,
+    custom_receiver: Option<MultichainAddress>,
     fees: Fees,
 }

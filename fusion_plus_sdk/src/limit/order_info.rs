@@ -1,17 +1,19 @@
-use alloy::primitives::{Address, U256};
+use alloy::primitives::U256;
+
+use crate::multichain_address::MultichainAddress;
 
 pub struct OrderInfoData {
-    pub maker_asset: Address,
-    pub taker_asset: Address,
+    pub maker_asset: MultichainAddress,
+    pub taker_asset: MultichainAddress,
     pub making_amount: U256,
     pub taking_amount: U256,
-    pub maker: Address,
-    pub receiver: Option<Address>,
+    pub maker: MultichainAddress,
+    pub receiver: Option<MultichainAddress>,
     pub salt: Option<U256>,
 }
 
 impl OrderInfoData {
-    pub fn with_receiver(mut self, receiver: Address) -> Self {
+    pub fn with_receiver(mut self, receiver: MultichainAddress) -> Self {
         self.receiver = Some(receiver);
         self
     }
@@ -21,7 +23,7 @@ impl OrderInfoData {
         self
     }
 
-    pub fn with_taker_asset(mut self, taker_asset: Address) -> Self {
+    pub fn with_taker_asset(mut self, taker_asset: MultichainAddress) -> Self {
         self.taker_asset = taker_asset;
         self
     }

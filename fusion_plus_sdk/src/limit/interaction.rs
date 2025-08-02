@@ -1,17 +1,22 @@
-use alloy::primitives::{Address, Bytes};
+use alloy::primitives::Bytes;
 
-use crate::utils::bytes_iter::{BytesIter, Side};
+use crate::{
+    multichain_address::MultichainAddress,
+    utils::bytes_iter::{BytesIter, Side},
+};
 
 #[cfg_attr(test, derive(Default, PartialEq))]
 #[derive(Clone, Debug)]
 pub struct Interaction {
-    pub target: Address,
+    pub target: MultichainAddress,
     pub data: Bytes,
 }
 
 impl Interaction {
     pub fn encode(&self) -> Bytes {
-        [self.target.to_vec(), self.data.to_vec()].concat().into()
+        [self.target.as_raw().to_vec(), self.data.to_vec()]
+            .concat()
+            .into()
     }
 
     pub fn decode_from(bytes: Bytes) -> Self {
@@ -20,6 +25,9 @@ impl Interaction {
         let target = iter.next_address(Side::Front);
         let data = iter.rest();
 
-        Self { target, data }
+        Self {
+            target: MultichainAddress::from_raw(target),
+            data,
+        }
     }
 }

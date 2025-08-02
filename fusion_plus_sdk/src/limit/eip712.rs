@@ -17,7 +17,7 @@ pub fn get_limit_order_v4_domain(chain_id: ChainId) -> Eip712Domain {
         name: "1inch Aggregation Router",
         version: "6",
         chain_id: chain_id as u64,
-        verifying_contract: verifying_contract,
+        verifying_contract: verifying_contract.as_raw(),
     }
 }
 

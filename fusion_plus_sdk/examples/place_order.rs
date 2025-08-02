@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use alloy::{
-    primitives::{Address, B256, U64, U256, keccak256},
+    primitives::{B256, U64, U256, keccak256},
     signers::{Signer, local::PrivateKeySigner},
 };
 use fusion_plus_sdk::{
@@ -10,6 +10,7 @@ use fusion_plus_sdk::{
     chain_id::ChainId,
     cross_chain_order::{CrossChainOrderParams, Fee, PreparedOrder},
     hash_lock::HashLock,
+    multichain_address::MultichainAddress,
     quote::QuoteRequest,
     relayer_request::RelayerRequest,
     utils::{
@@ -48,17 +49,17 @@ pub async fn main() -> fusion_plus_sdk::Result<()> {
 
     let arb = create_provider(ChainId::Arbitrum, wallet.clone());
 
-    let usdc_arb = ERC20::new(usdc(ChainId::Arbitrum), &arb);
+    let usdc_arb = ERC20::new(usdc(ChainId::Arbitrum).as_raw(), &arb);
     let spender = get_limit_order_contract_address(quote_request.src_chain_id);
     let allowance = usdc_arb
-        .allowance(wallet.address(), spender)
+        .allowance(wallet.address(), spender.as_raw())
         .call()
         .await
         .unwrap();
     if allowance < quote_request.src_amount {
         println!("Approving tokens for escrow factory...");
         usdc_arb
-            .approve(spender, U256::MAX)
+            .approve(spender.as_raw(), U256::MAX)
             .send()
             .await
             .unwrap()
@@ -97,12 +98,12 @@ pub async fn main() -> fusion_plus_sdk::Result<()> {
         &quote_request,
         &quote_result,
         CrossChainOrderParams {
-            dst_address: wallet.address(),
+            dst_address: MultichainAddress::from_raw(wallet.address()),
             hash_lock,
             secret_hashes: secret_hashes.clone(),
             fee: Some(Fee {
                 taking_fee_bps: 100,
-                taking_fee_receiver: Address::ZERO,
+                taking_fee_receiver: MultichainAddress::ZERO,
             }),
             preset: None,
         },

@@ -1,4 +1,4 @@
-use alloy::primitives::{Address, B256, Bytes};
+use alloy::primitives::{B256, Bytes};
 use chrono::Utc;
 use rand::Rng;
 
@@ -14,6 +14,7 @@ use crate::{
     },
     hash_lock::HashLock,
     limit::{eip712::LimitOrderV4, interaction::Interaction, order_info::OrderInfoData},
+    multichain_address::MultichainAddress,
     quote::{QuoteRequest, QuoteResult, preset::PresetType},
     utils::bps::Bps,
 };
@@ -75,7 +76,7 @@ impl PreparedOrder {
 
 #[derive(Debug)]
 pub struct CrossChainOrderParams {
-    pub dst_address: Address,
+    pub dst_address: MultichainAddress,
     pub hash_lock: HashLock,
     pub secret_hashes: Vec<B256>,
     pub fee: Option<Fee>,
@@ -85,18 +86,18 @@ pub struct CrossChainOrderParams {
 #[derive(Debug)]
 pub struct Fee {
     pub taking_fee_bps: u16,
-    pub taking_fee_receiver: Address,
+    pub taking_fee_receiver: MultichainAddress,
 }
 
 // https://github.com/1inch/cross-chain-sdk/blob/25ac3927c706a43e85f2f08cc9d9a3bdf156e1e9/src/api/quoter/quote/types.ts#L5
 pub struct CrossChainOrderParamsData {
     hash_lock: HashLock,
     preset: Option<PresetType>,
-    receiver: Option<Address>,
+    receiver: Option<MultichainAddress>,
     nonce: Option<u64>,
     permit: Option<Bytes>,
     is_permit_2: bool,
-    taking_fee_receiver: Option<Address>,
+    taking_fee_receiver: Option<MultichainAddress>,
     delay_auction_start_time_by: Option<u64>,
     order_expiration_delay: Option<u64>,
 }
@@ -206,7 +207,7 @@ impl CrossChainOrder {
     }
 
     pub fn new(
-        src_escrow_factory: Address,
+        src_escrow_factory: MultichainAddress,
         order_info: OrderInfoData, // CrossChainOrderInfo,
         escrow_params: EscrowParams,
         details: Details,

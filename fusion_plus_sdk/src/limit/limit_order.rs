@@ -1,4 +1,4 @@
-use alloy::primitives::{Address, B256, U256};
+use alloy::primitives::{B256, U256};
 
 use crate::{
     chain_id::ChainId,
@@ -7,16 +7,17 @@ use crate::{
         eip712::LimitOrderV4, extension::Extension, maker_traits::MakerTraits,
         order_info::OrderInfoData,
     },
+    multichain_address::MultichainAddress,
     utils::{alloy::CustomAlloy, random::get_random_uint},
 };
 
 #[derive(Clone, Debug)]
 pub struct LimitOrder {
     pub salt: U256,
-    pub maker: Address,
-    pub receiver: Address,
-    pub maker_asset: Address,
-    pub taker_asset: Address,
+    pub maker: MultichainAddress,
+    pub receiver: MultichainAddress,
+    pub maker_asset: MultichainAddress,
+    pub taker_asset: MultichainAddress,
     pub making_amount: U256,
     pub taking_amount: U256,
     pub maker_traits: MakerTraits,
@@ -54,12 +55,12 @@ impl LimitOrder {
             .receiver
             .map(|receiver| {
                 if receiver == order_info.maker {
-                    Address::ZERO
+                    MultichainAddress::ZERO
                 } else {
                     receiver
                 }
             })
-            .unwrap_or(Address::ZERO);
+            .unwrap_or(MultichainAddress::ZERO);
 
         if !extension.is_empty() {
             maker_traits = maker_traits.with_extension();
@@ -80,10 +81,10 @@ impl LimitOrder {
     pub fn to_v4(&self) -> LimitOrderV4 {
         LimitOrderV4 {
             salt: self.salt,
-            maker: self.maker,
-            receiver: self.receiver,
-            makerAsset: self.maker_asset,
-            takerAsset: self.taker_asset,
+            maker: self.maker.as_raw(),
+            receiver: self.receiver.as_raw(),
+            makerAsset: self.maker_asset.as_raw(),
+            takerAsset: self.taker_asset.as_raw(),
             makingAmount: self.making_amount,
             takingAmount: self.taking_amount,
             makerTraits: self.maker_traits.as_u256(),

@@ -20,6 +20,15 @@ pub enum MultichainAddress {
 }
 
 impl MultichainAddress {
+    pub const ZERO: Self = MultichainAddress::from_raw(Address::ZERO);
+
+    pub const fn from_raw(raw: Address) -> Self {
+        MultichainAddress::Ethereum {
+            raw,
+            chain_id: None,
+        }
+    }
+
     pub fn without_chain_id(self) -> Self {
         match self {
             MultichainAddress::Ethereum { raw, .. } => MultichainAddress::Ethereum {

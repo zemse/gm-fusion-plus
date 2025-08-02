@@ -14,6 +14,7 @@ use crate::{
     limit::{
         extension::Extension, extension_builder::ExtensionBuildable, interaction::Interaction,
     },
+    multichain_address::MultichainAddress,
     time_locks::TimeLocks,
 };
 
@@ -33,7 +34,7 @@ pub struct EscrowExtension {
     pub fusion_extension: FusionExtension,
     pub hash_lock_info: HashLock,
     pub dst_chain_id: ChainId,
-    pub dst_token: Address,
+    pub dst_token: MultichainAddress,
     pub src_safety_deposit: U256,
     pub dst_safety_deposit: U256,
     pub time_locks: TimeLocks,
@@ -41,11 +42,11 @@ pub struct EscrowExtension {
 
 impl EscrowExtension {
     pub fn new(
-        escrow_factory: Address,
+        escrow_factory: MultichainAddress,
         auction_details: AuctionDetails,
         post_interaction_data: SettlementPostInteractionData,
         maker_permit: Option<Interaction>,
-        mut dst_token: Address,
+        mut dst_token: MultichainAddress,
         escrow_params: EscrowParams,
     ) -> Self {
         assert!(escrow_params.src_safety_deposit <= UINT_128_MAX);
@@ -58,7 +59,7 @@ impl EscrowExtension {
             maker_permit,
         );
 
-        if dst_token == Address::ZERO {
+        if dst_token == MultichainAddress::ZERO {
             dst_token = NATIVE_CURRENCY;
         }
 
@@ -75,7 +76,7 @@ impl EscrowExtension {
 
     pub fn encode_extra_data(&self) -> Bytes {
         let dst_token = if self.dst_token == NATIVE_CURRENCY {
-            Address::ZERO
+            MultichainAddress::ZERO
         } else {
             self.dst_token
         };
@@ -83,7 +84,7 @@ impl EscrowExtension {
         DynSolValue::Tuple(vec![
             DynSolValue::FixedBytes(self.hash_lock_info.value(), 32),
             DynSolValue::Uint(U256::from(self.dst_chain_id as u64), 256),
-            DynSolValue::Address(dst_token),
+            DynSolValue::Address(dst_token.as_raw()),
             DynSolValue::Uint(
                 (self.src_safety_deposit << 128) | self.dst_safety_deposit,
                 256,
@@ -133,7 +134,9 @@ impl EscrowExtension {
         }
     }
 
-    pub fn decode_extra_data(bytes: Bytes) -> (HashLock, ChainId, Address, U256, U256, TimeLocks) {
+    pub fn decode_extra_data(
+        bytes: Bytes,
+    ) -> (HashLock, ChainId, MultichainAddress, U256, U256, TimeLocks) {
         let schema = DynSolType::Tuple(vec![
             DynSolType::FixedBytes(32), // hash_lock
             DynSolType::Uint(256),      // dst_chain_id
@@ -156,7 +159,7 @@ impl EscrowExtension {
 
         let dst_token = match values[2].as_address().expect("Invalid dst_token type") {
             Address::ZERO => NATIVE_CURRENCY,
-            addr => addr,
+            addr => MultichainAddress::from_raw(addr),
         };
 
         let (src_safety_deposit, dst_safety_deposit) = {
@@ -197,7 +200,7 @@ mod tests {
             fusion_extension: FusionExtension::default(),
             hash_lock_info: HashLock::new([3; 32].into()),
             dst_chain_id: ChainId::Ethereum,
-            dst_token: Address::ZERO.create(1),
+            dst_token: MultichainAddress::from_raw(Address::ZERO.create(1)),
             src_safety_deposit: U256::from(1000),
             dst_safety_deposit: U256::from(2000),
             time_locks: TimeLocks::new(36, 372, 528, 648, 60, 336, 456, Some(80)),

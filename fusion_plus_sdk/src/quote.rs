@@ -1,11 +1,12 @@
 pub mod preset;
 
-use alloy::primitives::{Address, Bytes, U256};
+use alloy::primitives::{Bytes, U256};
 use serde::{Deserialize, Serialize};
 
 use crate::{
     chain_id::ChainId,
     fusion::auction_details::AuctionWhitelistItem,
+    multichain_address::MultichainAddress,
     quote::preset::{Preset, PresetType},
     time_locks::TimeLocks,
 };
@@ -17,13 +18,13 @@ pub struct QuoteRequest {
     pub src_chain_id: ChainId,
     #[serde(rename = "dstChain")]
     pub dst_chain_id: ChainId,
-    pub src_token_address: Address,
-    pub dst_token_address: Address,
+    pub src_token_address: MultichainAddress,
+    pub dst_token_address: MultichainAddress,
     #[serde(rename = "amount")]
     pub src_amount: U256,
     pub enable_estimate: bool,
     #[serde(rename = "walletAddress")]
-    pub maker_address: Address,
+    pub maker_address: MultichainAddress,
     pub permit: Option<Bytes>,
     pub fee: Option<u64>,
     pub source: Option<String>,
@@ -37,9 +38,9 @@ pub struct QuoteResult {
     pub src_token_amount: U256,
     pub dst_token_amount: U256,
     pub presets: QuotePresets,
-    pub src_escrow_factory: Address,
-    pub dst_escrow_factory: Address,
-    pub whitelist: Vec<Address>,
+    pub src_escrow_factory: MultichainAddress,
+    pub dst_escrow_factory: MultichainAddress,
+    pub whitelist: Vec<MultichainAddress>,
     pub time_locks: TimeLocks,
     pub src_safety_deposit: U256,
     pub dst_safety_deposit: U256,
@@ -83,11 +84,11 @@ impl QuoteRequest {
     pub fn new(
         src_chain_id: impl Into<ChainId>,
         dst_chain_id: impl Into<ChainId>,
-        src_token_address: impl Into<Address>,
-        dst_token_address: impl Into<Address>,
+        src_token_address: impl Into<MultichainAddress>,
+        dst_token_address: impl Into<MultichainAddress>,
         src_amount: impl Into<U256>,
         enable_estimate: bool,
-        maker_address: impl Into<Address>,
+        maker_address: impl Into<MultichainAddress>,
     ) -> Self {
         QuoteRequest {
             src_chain_id: src_chain_id.into(),
@@ -123,7 +124,7 @@ impl QuoteResult {
     pub fn get_whitelist(
         &self,
         auction_start_time: u64,
-        exclusive_resolver: Option<&Address>,
+        exclusive_resolver: Option<&MultichainAddress>,
     ) -> Vec<AuctionWhitelistItem> {
         if let Some(exclusive_resolver) = exclusive_resolver {
             self.whitelist

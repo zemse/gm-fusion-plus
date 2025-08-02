@@ -1,9 +1,10 @@
-use alloy::primitives::{Address, U256};
+use alloy::primitives::U256;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     fusion::auction_details::{AuctionDetails, AuctionPoint},
+    multichain_address::MultichainAddress,
     quote::GasCostConfig,
 };
 
@@ -26,7 +27,7 @@ pub struct Preset {
     pub auction_start_amount: U256,
     pub start_amount: U256,
     pub auction_end_amount: U256,
-    pub exclusive_resolver: Option<Address>,
+    pub exclusive_resolver: Option<MultichainAddress>,
     pub cost_in_dst_token: U256,
     pub points: Vec<AuctionPoint>,
     pub allow_partial_fills: bool,

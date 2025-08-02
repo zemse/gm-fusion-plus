@@ -1,8 +1,11 @@
 use std::fmt::Debug;
 
-use alloy::primitives::{Address, Bytes};
+use alloy::primitives::Bytes;
 
-use crate::limit::{extension::Extension, interaction::Interaction};
+use crate::{
+    limit::{extension::Extension, interaction::Interaction},
+    multichain_address::MultichainAddress,
+};
 
 pub trait ExtensionBuildable: Clone + Debug {
     fn build(&self) -> Extension;
@@ -32,13 +35,13 @@ impl ExtensionBuilder {
         self
     }
 
-    pub fn with_making_amount_data(mut self, address: Address, data: Bytes) -> Self {
-        self.making_amount_data = [address.to_vec(), data.to_vec()].concat().into();
+    pub fn with_making_amount_data(mut self, address: MultichainAddress, data: Bytes) -> Self {
+        self.making_amount_data = [address.as_raw().to_vec(), data.to_vec()].concat().into();
         self
     }
 
-    pub fn with_taking_amount_data(mut self, address: Address, data: Bytes) -> Self {
-        self.taking_amount_data = [address.to_vec(), data.to_vec()].concat().into();
+    pub fn with_taking_amount_data(mut self, address: MultichainAddress, data: Bytes) -> Self {
+        self.taking_amount_data = [address.as_raw().to_vec(), data.to_vec()].concat().into();
         self
     }
 
@@ -47,8 +50,10 @@ impl ExtensionBuilder {
         self
     }
 
-    pub fn with_maker_permit(mut self, token_from: Address, permit_data: &Bytes) -> Self {
-        self.maker_permit = [token_from.to_vec(), permit_data.to_vec()].concat().into();
+    pub fn with_maker_permit(mut self, token_from: MultichainAddress, permit_data: &Bytes) -> Self {
+        self.maker_permit = [token_from.as_raw().to_vec(), permit_data.to_vec()]
+            .concat()
+            .into();
         self
     }
 
