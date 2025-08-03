@@ -117,7 +117,7 @@ pub async fn main() -> fusion_plus_sdk::Result<()> {
 
     let rr = RelayerRequest::from_prepared_order(
         &order,
-        signature,
+        &signature,
         quote_result.quote_id.clone().unwrap(),
         if secret_hashes.len() == 1 {
             None

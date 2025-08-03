@@ -24,7 +24,7 @@ pub struct RelayerRequest {
 impl RelayerRequest {
     pub fn from_prepared_order(
         prepared_order: &PreparedOrder,
-        signature: Signature,
+        signature: &Signature,
         quote_id: String,
         secret_hashes: Option<Vec<B256>>,
     ) -> Self {
@@ -46,5 +46,9 @@ impl RelayerRequest {
             extension: prepared_order.order.inner.extension.build().encode(),
             secret_hashes,
         }
+    }
+
+    pub fn order_hash(&self) -> B256 {
+        self.order.get_order_hash(self.src_chain_id)
     }
 }

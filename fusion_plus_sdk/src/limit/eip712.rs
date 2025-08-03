@@ -22,7 +22,7 @@ pub fn get_limit_order_v4_domain(chain_id: ChainId) -> Eip712Domain {
 }
 
 sol! {
-    #[derive(Debug, Serialize, Deserialize)]
+    #[derive(Default, Debug, Serialize, Deserialize)]
     struct Order {
         uint256 salt;
         address maker;
