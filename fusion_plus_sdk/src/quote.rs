@@ -11,7 +11,7 @@ use crate::{
     time_locks::TimeLocks,
 };
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct QuoteRequest {
     #[serde(rename = "srcChain")]
@@ -31,7 +31,7 @@ pub struct QuoteRequest {
     pub is_permit2: Option<bool>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct QuoteResult {
     pub quote_id: Option<String>,
@@ -49,7 +49,7 @@ pub struct QuoteResult {
     pub volume: PairCurrency,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct QuotePresets {
     pub fast: Preset,
@@ -67,13 +67,13 @@ pub struct GasCostConfig {
     pub gas_price_estimate: U256, // API sends this as a string
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PairCurrency {
     pub usd: TokenPair,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TokenPair {
     pub src_token: String,
