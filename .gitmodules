@@ -1,3 +1,6 @@
 [submodule "gm-tui"]
 	path = gm-tui
 	url = git@github.com:zemse/gm.git
+[submodule "smart-contracts"]
+	path = smart-contracts
+	url = git@github.com:1inch/cross-chain-resolver-example.git
